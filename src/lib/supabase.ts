@@ -1,114 +1,22 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { CapacitacionResponseRecord } from './types';
 
-const STORAGE_KEY_RESPONSES = 'uss_capacitacion_responses';
-const STORAGE_KEY_CONFIG = 'uss_supabase_config';
-
-export function getStoredSupabaseConfig(): { url: string; anonKey: string } {
-  let envUrl = (import.meta.env.PUBLIC_SUPABASE_URL as string) || (import.meta.env.VITE_SUPABASE_URL as string) || 'https://xeiddxudvaazmevzmmlr.supabase.co';
-  let envKey = (import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string) || (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || 'sb_publishable_tlVHfHLiKpW71PcTHdtrTQ_1-lRRhsp';
-
-  // Si la clave se copió sin la "s" inicial (b_publishable_...)
-  if (envKey && envKey.startsWith('b_publishable_')) {
-    envKey = 's' + envKey;
-  }
-
-  if (typeof window === 'undefined') {
-    return { url: envUrl, anonKey: envKey };
-  }
-
-  const saved = localStorage.getItem(STORAGE_KEY_CONFIG);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed.url && parsed.anonKey) {
-        if (parsed.anonKey.startsWith('b_publishable_')) {
-          parsed.anonKey = 's' + parsed.anonKey;
-        }
-        return parsed;
-      }
-    } catch (e) {
-      console.error('Error parsing stored supabase config', e);
-    }
-  }
-
-  return { url: envUrl, anonKey: envKey };
-}
-
-export function saveStoredSupabaseConfig(url: string, anonKey: string): void {
-  if (typeof window !== 'undefined') {
-    let keyToSave = anonKey;
-    if (keyToSave && keyToSave.startsWith('b_publishable_')) {
-      keyToSave = 's' + keyToSave;
-    }
-    localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify({ url, anonKey: keyToSave }));
-  }
-}
-
+// Obtener cliente oficial de Supabase estrictamente desde variables de entorno
 export function getSupabaseClient(): SupabaseClient | null {
-  const { url, anonKey } = getStoredSupabaseConfig();
-  if (!url || !anonKey || url.includes('tu-proyecto')) {
+  const url = (import.meta.env.PUBLIC_SUPABASE_URL as string) || (import.meta.env.VITE_SUPABASE_URL as string) || '';
+  const anonKey = (import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string) || (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
+
+  if (!url || !anonKey) {
+    console.error('Faltan variables de entorno: PUBLIC_SUPABASE_URL o PUBLIC_SUPABASE_ANON_KEY');
     return null;
   }
+
   try {
     return createClient(url, anonKey);
   } catch (error) {
-    console.warn('Error al inicializar cliente Supabase:', error);
+    console.error('Error al inicializar cliente Supabase:', error);
     return null;
   }
-}
-
-export async function checkSupabaseTablesStatus(): Promise<{ connected: boolean; tablesExist: boolean; url: string; error?: string }> {
-  const { url, anonKey } = getStoredSupabaseConfig();
-  if (!url || !anonKey) {
-    return { connected: false, tablesExist: false, url: '' };
-  }
-
-  try {
-    const client = createClient(url, anonKey);
-    const { error } = await client.from('ubigeo_departamentos').select('id').limit(1);
-    if (error) {
-      if (error.code === 'PGRST205' || error.message.includes('schema cache') || error.message.includes('does not exist')) {
-        return { connected: true, tablesExist: false, url, error: 'Las tablas aún no han sido creadas en tu Supabase' };
-      }
-      return { connected: true, tablesExist: false, url, error: error.message };
-    }
-    return { connected: true, tablesExist: true, url };
-  } catch (err: any) {
-    return { connected: false, tablesExist: false, url, error: err.message };
-  }
-}
-
-export async function testSupabaseConnection(url: string, anonKey: string): Promise<{ success: boolean; message: string }> {
-  try {
-    const client = createClient(url, anonKey);
-    const { error } = await client.from('respuestas_capacitacion').select('id').limit(1);
-    if (error) {
-      return { success: false, message: `Error de Supabase: ${error.message}` };
-    }
-    return { success: true, message: '¡Conexión exitosa a Supabase y tabla encontrada!' };
-  } catch (err: any) {
-    return { success: false, message: `Error de conexión: ${err.message || err}` };
-  }
-}
-
-// Local Storage helpers
-export function getLocalResponses(): CapacitacionResponseRecord[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const data = localStorage.getItem(STORAGE_KEY_RESPONSES);
-    return data ? JSON.parse(data) : [];
-  } catch (e) {
-    console.error('Error al leer respuestas locales', e);
-    return [];
-  }
-}
-
-export function saveLocalResponse(record: CapacitacionResponseRecord): void {
-  if (typeof window === 'undefined') return;
-  const current = getLocalResponses();
-  current.unshift(record);
-  localStorage.setItem(STORAGE_KEY_RESPONSES, JSON.stringify(current));
 }
 
 // Map frontend camelCase to snake_case for Supabase
@@ -176,36 +84,22 @@ function databaseRowToRecord(row: any): CapacitacionResponseRecord {
 }
 
 export async function submitCapacitacionResponse(record: CapacitacionResponseRecord): Promise<{ success: boolean; synced: boolean; error?: string }> {
-  const recordWithMeta: CapacitacionResponseRecord = {
-    ...record,
-    id: record.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'rec_' + Date.now()),
-    created_at: new Date().toISOString(),
-    sync_status: 'local_only'
-  };
-
-  // Guardar siempre en local storage primero como respaldo garantizado
-  saveLocalResponse(recordWithMeta);
-
-  // Intentar sincronizar con Supabase si está disponible
   const supabase = getSupabaseClient();
   if (!supabase) {
-    return { success: false, synced: false, error: 'No se pudo inicializar la conexión con Supabase.' };
+    return {
+      success: false,
+      synced: false,
+      error: 'No se encontraron las variables PUBLIC_SUPABASE_URL o PUBLIC_SUPABASE_ANON_KEY configuradas.'
+    };
   }
 
   try {
-    const dbRow = recordToDatabaseRow(recordWithMeta);
-    const { error } = await supabase.from('respuestas_capacitacion').insert([dbRow]);
+    const dbRow = recordToDatabaseRow(record);
+    const { data, error } = await supabase.from('respuestas_capacitacion').insert([dbRow]).select();
+
     if (error) {
       console.error('Fallo al guardar en Supabase:', error.message);
       return { success: false, synced: false, error: error.message };
-    }
-
-    // Actualizar estado a synced en local
-    const local = getLocalResponses();
-    const idx = local.findIndex(r => r.id === recordWithMeta.id);
-    if (idx !== -1) {
-      local[idx].sync_status = 'synced';
-      localStorage.setItem(STORAGE_KEY_RESPONSES, JSON.stringify(local));
     }
 
     return { success: true, synced: true };
@@ -217,21 +111,23 @@ export async function submitCapacitacionResponse(record: CapacitacionResponseRec
 
 export async function fetchAllResponses(): Promise<{ records: CapacitacionResponseRecord[]; fromSupabase: boolean }> {
   const supabase = getSupabaseClient();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('respuestas_capacitacion')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!error && data) {
-        const records = data.map(databaseRowToRecord);
-        return { records, fromSupabase: true };
-      }
-    } catch (e) {
-      console.warn('Error al consultar Supabase, usando localStorage:', e);
-    }
+  if (!supabase) {
+    return { records: [], fromSupabase: false };
   }
 
-  return { records: getLocalResponses(), fromSupabase: false };
+  try {
+    const { data, error } = await supabase
+      .from('respuestas_capacitacion')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      const records = data.map(databaseRowToRecord);
+      return { records, fromSupabase: true };
+    }
+  } catch (e) {
+    console.error('Error al consultar Supabase:', e);
+  }
+
+  return { records: [], fromSupabase: false };
 }
