@@ -647,6 +647,9 @@ const PREGUNTAS_DOCUMENTACION = [
 
       try {
         const res = await submitCapacitacionResponse(payload);
+        if (!res.synced) {
+          throw new Error(res.error || 'No se pudo guardar en la base de datos de Supabase.');
+        }
 
         confetti({
           particleCount: 80,

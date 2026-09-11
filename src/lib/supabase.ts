@@ -5,8 +5,13 @@ const STORAGE_KEY_RESPONSES = 'uss_capacitacion_responses';
 const STORAGE_KEY_CONFIG = 'uss_supabase_config';
 
 export function getStoredSupabaseConfig(): { url: string; anonKey: string } {
-  const envUrl = (import.meta.env.PUBLIC_SUPABASE_URL as string) || (import.meta.env.VITE_SUPABASE_URL as string) || '';
-  const envKey = (import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string) || (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
+  let envUrl = (import.meta.env.PUBLIC_SUPABASE_URL as string) || (import.meta.env.VITE_SUPABASE_URL as string) || 'https://xeiddxudvaazmevzmmlr.supabase.co';
+  let envKey = (import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string) || (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || 'sb_publishable_tlVHfHLiKpW71PcTHdtrTQ_1-lRRhsp';
+
+  // Si la clave se copió sin la "s" inicial (b_publishable_...)
+  if (envKey && envKey.startsWith('b_publishable_')) {
+    envKey = 's' + envKey;
+  }
 
   if (typeof window === 'undefined') {
     return { url: envUrl, anonKey: envKey };
@@ -16,7 +21,12 @@ export function getStoredSupabaseConfig(): { url: string; anonKey: string } {
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (parsed.url && parsed.anonKey) return parsed;
+      if (parsed.url && parsed.anonKey) {
+        if (parsed.anonKey.startsWith('b_publishable_')) {
+          parsed.anonKey = 's' + parsed.anonKey;
+        }
+        return parsed;
+      }
     } catch (e) {
       console.error('Error parsing stored supabase config', e);
     }
@@ -27,7 +37,11 @@ export function getStoredSupabaseConfig(): { url: string; anonKey: string } {
 
 export function saveStoredSupabaseConfig(url: string, anonKey: string): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify({ url, anonKey }));
+    let keyToSave = anonKey;
+    if (keyToSave && keyToSave.startsWith('b_publishable_')) {
+      keyToSave = 's' + keyToSave;
+    }
+    localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify({ url, anonKey: keyToSave }));
   }
 }
 
@@ -175,15 +189,15 @@ export async function submitCapacitacionResponse(record: CapacitacionResponseRec
   // Intentar sincronizar con Supabase si está disponible
   const supabase = getSupabaseClient();
   if (!supabase) {
-    return { success: true, synced: false };
+    return { success: false, synced: false, error: 'No se pudo inicializar la conexión con Supabase.' };
   }
 
   try {
     const dbRow = recordToDatabaseRow(recordWithMeta);
     const { error } = await supabase.from('respuestas_capacitacion').insert([dbRow]);
     if (error) {
-      console.warn('Fallo al guardar en Supabase:', error.message);
-      return { success: true, synced: false, error: error.message };
+      console.error('Fallo al guardar en Supabase:', error.message);
+      return { success: false, synced: false, error: error.message };
     }
 
     // Actualizar estado a synced en local
@@ -196,8 +210,8 @@ export async function submitCapacitacionResponse(record: CapacitacionResponseRec
 
     return { success: true, synced: true };
   } catch (err: any) {
-    console.warn('Excepción al conectar con Supabase:', err);
-    return { success: true, synced: false, error: err.message };
+    console.error('Excepción al conectar con Supabase:', err);
+    return { success: false, synced: false, error: err.message || String(err) };
   }
 }
 

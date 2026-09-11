@@ -68,7 +68,10 @@ export async function getProvincias(deptoNameOrId: string | number): Promise<Ubi
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
-      let deptoId = typeof deptoNameOrId === 'number' ? deptoNameOrId : null;
+      let deptoId: number | null = typeof deptoNameOrId === 'number'
+        ? deptoNameOrId
+        : (!isNaN(Number(deptoNameOrId)) && String(deptoNameOrId).trim() !== '' ? Number(deptoNameOrId) : null);
+
       if (!deptoId) {
         const { data: deptoData } = await supabase
           .from('ubigeo_departamentos')
@@ -127,7 +130,10 @@ export async function getDistritos(provNameOrId: string | number, deptoName?: st
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
-      let provId = typeof provNameOrId === 'number' ? provNameOrId : null;
+      let provId: number | null = typeof provNameOrId === 'number'
+        ? provNameOrId
+        : (!isNaN(Number(provNameOrId)) && String(provNameOrId).trim() !== '' ? Number(provNameOrId) : null);
+
       if (!provId) {
         const { data: provData } = await supabase
           .from('ubigeo_provincias')
