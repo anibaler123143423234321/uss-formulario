@@ -3,36 +3,42 @@ export type LikertRating = 'MUY BUENO' | 'BUENO' | 'REGULAR' | 'DEFICIENTE' | 'M
 export interface FormParticipantAttributes {
   apellidosNombres: string;
   correo: string;
-  puestoTrabajo: string;
+  puestoTrabajo?: string;
   expositor: string;
   nombreCapacitacion: string;
-  sexo: string;
-  edad: string;
+  esMasculino: boolean;
+  edad: string | number;
   celular: string;
   maestria: string;
-  departamento: string;
-  provincia: string;
-  distrito: string;
+  departamentoId: number;
+  provinciaId: number;
+  distritoId: number;
+
+  // Metadata visual opcional para exportación
+  sexo?: string;
+  departamento?: string;
+  provincia?: string;
+  distrito?: string;
 }
 
 export interface FormEvaluationAnswers {
-  // Organización
-  organizacion_horario: LikertRating | '';
-  organizacion_instalaciones: LikertRating | '';
-  organizacion_audiovisuales: LikertRating | '';
+  // Organización (Valores numéricos 1 a 5)
+  organizacion_horario: number;
+  organizacion_instalaciones: number;
+  organizacion_audiovisuales: number;
   
-  // El Capacitador
-  capacitador_tema: LikertRating | '';
-  capacitador_dominio: LikertRating | '';
-  capacitador_metodologia: LikertRating | '';
-  capacitador_tiempo: LikertRating | '';
+  // El Capacitador (Valores numéricos 1 a 5)
+  capacitador_tema: number;
+  capacitador_dominio: number;
+  capacitador_metodologia: number;
+  capacitador_tiempo: number;
   
-  // Documentación
-  documentacion_calidad: LikertRating | '';
-  documentacion_contenido: LikertRating | '';
+  // Documentación (Valores numéricos 1 a 5)
+  documentacion_calidad: number;
+  documentacion_contenido: number;
   
   // Satisfacción General y Sugerencias
-  satisfaccion_general: LikertRating | '';
+  satisfaccion_general: number;
   observaciones_sugerencias: string;
 }
 

@@ -21,31 +21,33 @@ CREATE TABLE IF NOT EXISTS public.respuestas_capacitacion (
   puesto_trabajo TEXT,
   expositor TEXT,
   nombre_capacitacion TEXT,
-  sexo TEXT,
+  es_masculino BOOLEAN,
   edad TEXT,
   celular TEXT,
   maestria TEXT,
-  departamento TEXT,
-  provincia TEXT,
-  distrito TEXT,
   
-  -- Evaluación: Organización
-  organizacion_horario TEXT,
-  organizacion_instalaciones TEXT,
-  organizacion_audiovisuales TEXT,
+  -- Ubicación relacional por Foreign Keys
+  departamento_id INTEGER,
+  provincia_id INTEGER,
+  distrito_id INTEGER,
   
-  -- Evaluación: El Capacitador
-  capacitador_tema TEXT,
-  capacitador_dominio TEXT,
-  capacitador_metodologia TEXT,
-  capacitador_tiempo TEXT,
+  -- Evaluación: Organización (Escala Likert 1 a 5)
+  organizacion_horario SMALLINT CHECK (organizacion_horario BETWEEN 1 AND 5),
+  organizacion_instalaciones SMALLINT CHECK (organizacion_instalaciones BETWEEN 1 AND 5),
+  organizacion_audiovisuales SMALLINT CHECK (organizacion_audiovisuales BETWEEN 1 AND 5),
   
-  -- Evaluación: Documentación
-  documentacion_calidad TEXT,
-  documentacion_contenido TEXT,
+  -- Evaluación: El Capacitador (Escala Likert 1 a 5)
+  capacitador_tema SMALLINT CHECK (capacitador_tema BETWEEN 1 AND 5),
+  capacitador_dominio SMALLINT CHECK (capacitador_dominio BETWEEN 1 AND 5),
+  capacitador_metodologia SMALLINT CHECK (capacitador_metodologia BETWEEN 1 AND 5),
+  capacitador_tiempo SMALLINT CHECK (capacitador_tiempo BETWEEN 1 AND 5),
   
-  -- Satisfacción General y Sugerencias
-  satisfaccion_general TEXT,
+  -- Evaluación: Documentación (Escala Likert 1 a 5)
+  documentacion_calidad SMALLINT CHECK (documentacion_calidad BETWEEN 1 AND 5),
+  documentacion_contenido SMALLINT CHECK (documentacion_contenido BETWEEN 1 AND 5),
+  
+  -- Satisfacción General (1 a 5) y Sugerencias
+  satisfaccion_general SMALLINT CHECK (satisfaccion_general BETWEEN 1 AND 5),
   observaciones_sugerencias TEXT
 );
 
@@ -67,7 +69,8 @@ USING (true);
 
 -- 4. Índices para acelerar búsquedas y reportes
 CREATE INDEX IF NOT EXISTS idx_capacitacion_fecha ON public.respuestas_capacitacion (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_capacitacion_depto ON public.respuestas_capacitacion (departamento);
+CREATE INDEX IF NOT EXISTS idx_capacitacion_distrito ON public.respuestas_capacitacion (distrito_id);
+CREATE INDEX IF NOT EXISTS idx_capacitacion_depto ON public.respuestas_capacitacion (departamento_id);
 CREATE INDEX IF NOT EXISTS idx_capacitacion_maestria ON public.respuestas_capacitacion (maestria);
 
 

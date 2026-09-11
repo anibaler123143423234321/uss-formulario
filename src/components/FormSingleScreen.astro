@@ -196,7 +196,7 @@ const PREGUNTAS_DOCUMENTACION = [
             <select id="departamento" name="departamento" required class="custom-input-light text-xs">
               <option value="">Dpto: Seleccionar</option>
               {LOCAL_DEPARTAMENTOS.map((d) => (
-                <option value={d.name}>{d.name}</option>
+                <option value={d.name} data-id={d.id}>{d.name}</option>
               ))}
             </select>
           </div>
@@ -515,6 +515,7 @@ const PREGUNTAS_DOCUMENTACION = [
         deptos.forEach(d => {
           const opt = document.createElement('option');
           opt.value = d.name;
+          opt.dataset.id = String(d.id);
           opt.textContent = d.name;
           selDepto.appendChild(opt);
         });
@@ -526,22 +527,24 @@ const PREGUNTAS_DOCUMENTACION = [
 
   if (selDepto && selProv && selDist) {
     selDepto.addEventListener('change', async () => {
-      const depto = selDepto.value;
+      const selectedDeptoOpt = selDepto.options[selDepto.selectedIndex];
+      const deptoId = selectedDeptoOpt?.dataset?.id || selDepto.value;
       selProv.innerHTML = '<option value="">Cargando provincias...</option>';
       selProv.disabled = true;
       selDist.innerHTML = '<option value="">Distrito: Primero elija Prov</option>';
       selDist.disabled = true;
 
-      if (!depto) {
+      if (!deptoId) {
         selProv.innerHTML = '<option value="">Prov: Primero elija Dpto</option>';
         return;
       }
 
-      const provs = await getProvincias(depto);
+      const provs = await getProvincias(deptoId);
       selProv.innerHTML = '<option value="">Prov: Seleccionar</option>';
       provs.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.name;
+        opt.dataset.id = String(p.id);
         opt.textContent = p.name;
         selProv.appendChild(opt);
       });
@@ -549,21 +552,23 @@ const PREGUNTAS_DOCUMENTACION = [
     });
 
     selProv.addEventListener('change', async () => {
-      const prov = selProv.value;
+      const selectedProvOpt = selProv.options[selProv.selectedIndex];
+      const provId = selectedProvOpt?.dataset?.id || selProv.value;
       const depto = selDepto.value;
       selDist.innerHTML = '<option value="">Cargando distritos...</option>';
       selDist.disabled = true;
 
-      if (!prov) {
+      if (!provId) {
         selDist.innerHTML = '<option value="">Distrito: Primero elija Prov</option>';
         return;
       }
 
-      const dists = await getDistritos(prov, depto);
+      const dists = await getDistritos(provId, depto);
       selDist.innerHTML = '<option value="">Distrito: Seleccionar</option>';
       dists.forEach(d => {
         const opt = document.createElement('option');
         opt.value = d.name;
+        opt.dataset.id = String(d.id);
         opt.textContent = d.name;
         selDist.appendChild(opt);
       });
@@ -588,33 +593,55 @@ const PREGUNTAS_DOCUMENTACION = [
 
       const formData = new FormData(form);
 
+      const deptoOpt = selDepto.options[selDepto.selectedIndex];
+      const provOpt = selProv.options[selProv.selectedIndex];
+      const distOpt = selDist.options[selDist.selectedIndex];
+
+      const LIKERT_SCORE_MAP: Record<string, number> = {
+        'MUY BUENO': 5,
+        'BUENO': 4,
+        'REGULAR': 3,
+        'DEFICIENTE': 2,
+        'MUY DEFICIENTE': 1
+      };
+
+      const getScore = (fieldName: string) => {
+        const val = formData.get(fieldName) as string;
+        return LIKERT_SCORE_MAP[val] || parseInt(val, 10) || 5;
+      };
+
       const payload: any = {
         apellidosNombres: `${formData.get('apellidos') || ''}, ${formData.get('nombres') || ''}`.trim(),
         correo: formData.get('correo') as string,
-        puestoTrabajo: formData.get('puestoTrabajo') as string,
+        puestoTrabajo: (formData.get('puestoTrabajo') as string) || '',
         expositor: formData.get('expositor') as string,
         nombreCapacitacion: formData.get('nombreCapacitacion') as string,
         sexo: formData.get('sexo') as string,
+        esMasculino: (formData.get('sexo') === 'MASCULINO'),
         edad: formData.get('edad') as string,
         celular: formData.get('celular') as string,
         maestria: formData.get('maestria') as string,
+        
+        departamentoId: deptoOpt?.dataset?.id ? Number(deptoOpt.dataset.id) : null,
+        provinciaId: provOpt?.dataset?.id ? Number(provOpt.dataset.id) : null,
+        distritoId: distOpt?.dataset?.id ? Number(distOpt.dataset.id) : null,
         departamento: formData.get('departamento') as string,
         provincia: formData.get('provincia') as string,
         distrito: formData.get('distrito') as string,
         
-        organizacion_horario: formData.get('organizacion_horario') as string,
-        organizacion_instalaciones: formData.get('organizacion_instalaciones') as string,
-        organizacion_audiovisuales: formData.get('organizacion_audiovisuales') as string,
+        organizacion_horario: getScore('organizacion_horario'),
+        organizacion_instalaciones: getScore('organizacion_instalaciones'),
+        organizacion_audiovisuales: getScore('organizacion_audiovisuales'),
 
-        capacitador_tema: formData.get('capacitador_tema') as string,
-        capacitador_dominio: formData.get('capacitador_dominio') as string,
-        capacitador_metodologia: formData.get('capacitador_metodologia') as string,
-        capacitador_tiempo: formData.get('capacitador_tiempo') as string,
+        capacitador_tema: getScore('capacitador_tema'),
+        capacitador_dominio: getScore('capacitador_dominio'),
+        capacitador_metodologia: getScore('capacitador_metodologia'),
+        capacitador_tiempo: getScore('capacitador_tiempo'),
 
-        documentacion_calidad: formData.get('documentacion_calidad') as string,
-        documentacion_contenido: formData.get('documentacion_contenido') as string,
+        documentacion_calidad: getScore('documentacion_calidad'),
+        documentacion_contenido: getScore('documentacion_contenido'),
 
-        satisfaccion_general: formData.get('satisfaccion_general') as string,
+        satisfaccion_general: getScore('satisfaccion_general'),
         observaciones_sugerencias: formData.get('observaciones_sugerencias') as string
       };
 

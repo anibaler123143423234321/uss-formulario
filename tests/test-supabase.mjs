@@ -19,11 +19,11 @@ function assert(condition, message) {
 }
 
 async function testSuite() {
-  console.log('\n======================================================');
-  console.log('🧪 SUITE DE PRUEBAS UNITARIAS: SUPABASE & FORMULARIO');
-  console.log('======================================================\n');
+  console.log('\n================================================================');
+  console.log('🧪 SUITE DE PRUEBAS: ESQUEMA NORMALIZADO (IDs, BOOLEANO, LIKERT)');
+  console.log('================================================================\n');
 
-  // PRUEBA 1: Conexión con Supabase
+  // PRUEBA 1: Verificación de Tablas
   console.log('Test 1: Verificación de Tablas en Supabase...');
   const tables = [
     'respuestas_capacitacion',
@@ -37,108 +37,120 @@ async function testSuite() {
     assert(!error && count !== null, `Tabla [${table}] accesible (registros: ${count})`);
   }
 
-  // PRUEBA 2: Consulta de Ubigeos
-  console.log('\nTest 2: Integridad de Ubigeo Peruano...');
-  const { data: deptos, error: errDeptos } = await supabase
+  // PRUEBA 2: Consulta de IDs de Ubigeo
+  console.log('\nTest 2: Consulta de IDs para Lambayeque / Chiclayo / Pimentel...');
+  const { data: deptos } = await supabase
     .from('ubigeo_departamentos')
-    .select('id, departamento, ubigeo')
+    .select('id, departamento')
     .ilike('departamento', 'LAMBAYEQUE')
     .limit(1);
 
-  assert(!errDeptos && deptos?.length === 1, 'Departamento LAMBAYEQUE encontrado');
-  const lambayequeId = deptos?.[0]?.id;
+  const deptoId = deptos?.[0]?.id;
+  assert(deptoId !== undefined, `ID Departamento LAMBAYEQUE: ${deptoId}`);
 
-  if (lambayequeId) {
-    const { data: provs, error: errProvs } = await supabase
-      .from('ubigeo_provincias')
-      .select('id, provincia')
-      .eq('departamento_id', lambayequeId);
+  const { data: provs } = await supabase
+    .from('ubigeo_provincias')
+    .select('id, provincia')
+    .eq('departamento_id', deptoId)
+    .ilike('provincia', 'CHICLAYO')
+    .limit(1);
 
-    assert(!errProvs && provs?.some(p => p.provincia === 'CHICLAYO'), 'Provincia CHICLAYO encontrada en Lambayeque');
-    const chiclayoId = provs?.find(p => p.provincia === 'CHICLAYO')?.id;
+  const provId = provs?.[0]?.id;
+  assert(provId !== undefined, `ID Provincia CHICLAYO: ${provId}`);
 
-    if (chiclayoId) {
-      const { data: dists, error: errDists } = await supabase
-        .from('ubigeo_distritos')
-        .select('id, distrito')
-        .eq('provincia_id', chiclayoId);
+  const { data: dists } = await supabase
+    .from('ubigeo_distritos')
+    .select('id, distrito')
+    .eq('provincia_id', provId)
+    .ilike('distrito', 'PIMENTEL')
+    .limit(1);
 
-      assert(!errDists && dists?.some(d => d.distrito === 'PIMENTEL'), 'Distrito PIMENTEL (Campus USS) encontrado en Chiclayo');
-    }
-  }
+  const distId = dists?.[0]?.id;
+  assert(distId !== undefined, `ID Distrito PIMENTEL (Campus USS): ${distId}`);
 
-  // PRUEBA 3: Inserción de Respuesta Completa
-  console.log('\nTest 3: Inserción en tabla [respuestas_capacitacion]...');
-  const uniqueEmail = `test.unitario.${Date.now()}@uss.edu.pe`;
-  const mockFormResponse = {
-    apellidos_nombres: 'García Pérez, Ana María',
+  // PRUEBA 3: Inserción Normalizada
+  console.log('\nTest 3: Inserción con Foreign Keys, Booleano y Likert 1-5...');
+  const uniqueEmail = `docente.test.${Date.now()}@uss.edu.pe`;
+  const mockNormalizedResponse = {
+    apellidos_nombres: 'Chuman Lluen, Dagner',
     correo: uniqueEmail,
-    puesto_trabajo: 'Docente Investigador',
+    puesto_trabajo: 'Ingeniero de Sistemas',
     expositor: 'Equipo de Calidad y Acreditación USS',
-    nombre_capacitacion: 'Estándares ISO Core del Sistema: SGC USS, Modelo de SUNEDU - Plan de Supervisión',
-    sexo: 'Femenino',
-    edad: 42,
-    celular: '974829103',
+    nombre_capacitacion: 'Estándares ISO Core del Sistema: SGC USS, Modelo de SUNEDU',
+    es_masculino: true, // Booleano para Sexo
+    edad: 30,
+    celular: '987654321',
     maestria: 'MAESTRÍA EN ADMINISTRACIÓN DE NEGOCIOS - MBA',
-    departamento: 'LAMBAYEQUE',
-    provincia: 'CHICLAYO',
-    distrito: 'PIMENTEL',
 
-    organizacion_horario: 'MUY BUENO',
-    organizacion_instalaciones: 'BUENO',
-    organizacion_audiovisuales: 'MUY BUENO',
+    // Relaciones por ID
+    departamento_id: deptoId,
+    provincia_id: provId,
+    distrito_id: distId,
 
-    capacitador_tema: 'MUY BUENO',
-    capacitador_dominio: 'MUY BUENO',
-    capacitador_metodologia: 'MUY BUENO',
-    capacitador_tiempo: 'BUENO',
-
-    documentacion_calidad: 'MUY BUENO',
-    documentacion_contenido: 'MUY BUENO',
-
-    satisfaccion_general: 'MUY BUENO',
-    observaciones_sugerencias: 'Excelente capacitación, la organización y contenido fueron impecables.'
+    // Escala Likert como enteros 1 a 5
+    organizacion_horario: 5,
+    organizacion_instalaciones: 4,
+    organizacion_audiovisuales: 5,
+    capacitador_tema: 5,
+    capacitador_dominio: 5,
+    capacitador_metodologia: 4,
+    capacitador_tiempo: 5,
+    documentacion_calidad: 5,
+    documentacion_contenido: 5,
+    satisfaccion_general: 5,
+    observaciones_sugerencias: 'Excelente sesión formativa e infraestructura relacional.'
   };
 
   const { data: insertResult, error: insertError } = await supabase
     .from('respuestas_capacitacion')
-    .insert([mockFormResponse])
+    .insert([mockNormalizedResponse])
     .select();
 
-  assert(!insertError, `Inserción exitosa sin errores (${insertError ? insertError.message : 'OK'})`);
+  assert(!insertError, `Inserción exitosa (${insertError ? insertError.message : 'OK 201'})`);
   assert(insertResult && insertResult.length > 0, `ID generado: ${insertResult?.[0]?.id}`);
 
-  // PRUEBA 4: Inserción con Puesto de Trabajo Opcional (Vacío)
-  console.log('\nTest 4: Inserción con Puesto de Trabajo omitido (Opcional)...');
-  const mockWithoutPuesto = {
-    ...mockFormResponse,
-    correo: `test.sinpuesto.${Date.now()}@uss.edu.pe`,
+  // PRUEBA 4: Inserción con Femenino (es_masculino = false) y Puesto de Trabajo Opcional (null)
+  console.log('\nTest 4: Inserción Femenino (es_masculino = false) y puesto opcional...');
+  const mockFemale = {
+    ...mockNormalizedResponse,
+    correo: `docente.fem.${Date.now()}@uss.edu.pe`,
+    es_masculino: false,
     puesto_trabajo: null
   };
 
-  const { data: insertNoPuesto, error: insertNoPuestoErr } = await supabase
+  const { data: insertFemale, error: insertFemaleErr } = await supabase
     .from('respuestas_capacitacion')
-    .insert([mockWithoutPuesto])
+    .insert([mockFemale])
     .select();
 
-  assert(!insertNoPuestoErr, `Inserción sin puesto de trabajo exitosa (ID: ${insertNoPuesto?.[0]?.id})`);
+  assert(!insertFemaleErr, `Inserción Femenino exitosa (ID: ${insertFemale?.[0]?.id})`);
+  assert(insertFemale?.[0]?.es_masculino === false, 'es_masculino guardado como false');
 
-  // PRUEBA 5: Lectura y Verificación de Datos Guardados
-  console.log('\nTest 5: Verificación de persistencia y lectura en Supabase...');
-  const { data: readRecord, error: readError } = await supabase
+  // PRUEBA 5: Verificación de Consultas y Relaciones (JOIN con Ubigeos)
+  console.log('\nTest 5: Verificación de Relaciones por ID con JOIN...');
+  const { data: joinedRecord, error: joinErr } = await supabase
     .from('respuestas_capacitacion')
-    .select('*')
+    .select(`
+      id,
+      correo,
+      es_masculino,
+      satisfaccion_general,
+      ubigeo_departamentos (departamento),
+      ubigeo_provincias (provincia),
+      ubigeo_distritos (distrito)
+    `)
     .eq('correo', uniqueEmail)
     .single();
 
-  assert(!readError && readRecord !== null, 'Lectura del registro por correo electrónico');
-  assert(readRecord?.departamento === 'LAMBAYEQUE', 'Campo departamento persistido correctamente');
-  assert(readRecord?.distrito === 'PIMENTEL', 'Campo distrito persistido correctamente');
-  assert(readRecord?.satisfaccion_general === 'MUY BUENO', 'Satisfacción general registrada');
+  assert(!joinErr, `Consulta relacional JOIN exitosa (${joinErr ? joinErr.message : 'OK'})`);
+  assert(joinedRecord?.ubigeo_departamentos?.departamento === 'LAMBAYEQUE', 'JOIN departamento: LAMBAYEQUE');
+  assert(joinedRecord?.ubigeo_provincias?.provincia === 'CHICLAYO', 'JOIN provincia: CHICLAYO');
+  assert(joinedRecord?.ubigeo_distritos?.distrito === 'PIMENTEL', 'JOIN distrito: PIMENTEL');
+  assert(joinedRecord?.satisfaccion_general === 5, 'Satisfacción general guardada como numérico 5');
 
-  console.log('\n======================================================');
+  console.log('\n================================================================');
   console.log(`📊 RESULTADOS: ${passedCount} pasadas, ${failedCount} fallidas`);
-  console.log('======================================================\n');
+  console.log('================================================================\n');
 
   if (failedCount > 0) {
     process.exit(1);
@@ -146,6 +158,6 @@ async function testSuite() {
 }
 
 testSuite().catch((e) => {
-  console.error('Error fatal durante la suite de pruebas:', e);
+  console.error('Error fatal durante las pruebas:', e);
   process.exit(1);
 });
