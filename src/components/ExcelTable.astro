@@ -1,0 +1,608 @@
+---
+// ExcelTable.astro
+---
+
+<div class="w-full max-w-7xl mx-auto space-y-6">
+  
+  <!-- Ribbon Toolbar estilo Hoja de Cálculo Excel -->
+  <div class="glass-card rounded-2xl p-4 border border-white/10 shadow-2xl flex flex-wrap items-center justify-between gap-4">
+    
+    <!-- Título y Estado -->
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-xl border border-emerald-500/30">
+        📊
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="text-base sm:text-lg font-black text-white">Hoja de Respuestas de Capacitación</h2>
+          <span id="excel-data-source-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-800 text-slate-400 border border-white/10">
+            Cargando...
+          </span>
+        </div>
+        <p class="text-xs text-slate-400">Visualización tipo base de datos con exportación nativa a Microsoft Excel (.xlsx)</p>
+      </div>
+    </div>
+
+    <!-- Acciones de Exportación y Conexión -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Botón Exportar XLSX -->
+      <button
+        type="button"
+        id="btn-export-xlsx"
+        class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/30 transition-all hover:scale-105 active:scale-95"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <span>Exportar a Excel (.xlsx)</span>
+      </button>
+
+      <!-- Botón Exportar CSV -->
+      <button
+        type="button"
+        id="btn-export-csv"
+        class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-200 font-bold text-xs sm:text-sm transition-all"
+      >
+        <span>CSV</span>
+      </button>
+
+      <!-- Botón Recargar Supabase -->
+      <button
+        type="button"
+        id="btn-refresh-data"
+        class="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-300 hover:text-white text-xs font-semibold transition-all"
+        title="Recargar datos de Supabase"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span class="hidden sm:inline">Recargar</span>
+      </button>
+
+      <!-- Botón Datos Demo -->
+      <button
+        type="button"
+        id="btn-load-demo-data"
+        class="px-3 py-2.5 rounded-xl bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/30 text-blue-300 font-semibold text-xs transition-all"
+        title="Cargar ejemplos de prueba para visualizar la tabla"
+      >
+        + Cargar Demo
+      </button>
+
+      <!-- Botón Limpiar -->
+      <button
+        type="button"
+        id="btn-clear-local-data"
+        class="px-2.5 py-2.5 rounded-xl bg-slate-900 hover:bg-red-950/40 border border-white/10 hover:border-red-500/30 text-slate-400 hover:text-red-400 text-xs transition-all"
+        title="Limpiar datos locales"
+      >
+        🗑️
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Tarjetas KPI / Métricas Rápidas -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="glass-card rounded-2xl p-4 border border-white/10 space-y-1">
+      <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Respuestas</p>
+      <p id="kpi-total-responses" class="text-2xl sm:text-3xl font-black text-white">0</p>
+      <p class="text-[11px] text-slate-400">Participantes registrados</p>
+    </div>
+
+    <div class="glass-card rounded-2xl p-4 border border-white/10 space-y-1">
+      <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Satisfacción Promedio</p>
+      <div class="flex items-baseline gap-2">
+        <p id="kpi-satisfaction-avg" class="text-2xl sm:text-3xl font-black text-emerald-400">0.0</p>
+        <span class="text-xs text-slate-400">/ 5.0 ★</span>
+      </div>
+      <p class="text-[11px] text-slate-400">Índice global del evento</p>
+    </div>
+
+    <div class="glass-card rounded-2xl p-4 border border-white/10 space-y-1">
+      <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Top Departamento</p>
+      <p id="kpi-top-depto" class="text-lg sm:text-xl font-extrabold text-amber-400 truncate">-</p>
+      <p class="text-[11px] text-slate-400">Región de mayor concurrencia</p>
+    </div>
+
+    <div class="glass-card rounded-2xl p-4 border border-white/10 space-y-1">
+      <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Top Maestría / Prog.</p>
+      <p id="kpi-top-maestria" class="text-xs sm:text-sm font-bold text-blue-300 line-clamp-2">-</p>
+      <p class="text-[11px] text-slate-400">Programa más evaluado</p>
+    </div>
+  </div>
+
+  <!-- Barra de Filtros y Búsqueda -->
+  <div class="glass-card rounded-2xl p-4 border border-white/10 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex-1 min-w-[240px] relative">
+      <input
+        type="text"
+        id="input-search-table"
+        placeholder="Buscar por apellidos, nombres, correo, distrito o puesto..."
+        class="custom-input pl-10 text-xs sm:text-sm"
+      />
+      <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <select id="select-filter-depto" class="custom-input text-xs sm:text-sm w-48">
+        <option value="">Todos los Deptos</option>
+      </select>
+
+      <span id="label-showing-count" class="text-xs text-slate-400 whitespace-nowrap">
+        Mostrando 0 registros
+      </span>
+    </div>
+  </div>
+
+  <!-- Cuadrícula Hoja de Cálculo Tipo Excel -->
+  <div class="glass-card rounded-2xl border border-white/10 shadow-2xl overflow-hidden">
+    <div class="overflow-x-auto max-h-[580px] relative">
+      <table class="w-full text-left border-collapse text-xs whitespace-nowrap" id="excel-data-table">
+        <!-- Cabeceras fijas estilo Excel -->
+        <thead class="sticky top-0 z-20 bg-slate-900 border-b border-white/10 uppercase tracking-wider text-[11px] font-bold text-slate-300">
+          <tr>
+            <th class="p-3.5 bg-slate-900 text-center w-12 border-r border-white/5">N°</th>
+            <th class="p-3.5 bg-slate-900 border-r border-white/5">Participante</th>
+            <th class="p-3.5 bg-slate-900 border-r border-white/5">Correo USS</th>
+            <th class="p-3.5 bg-slate-900 border-r border-white/5">Celular</th>
+            <th class="p-3.5 bg-slate-900 border-r border-white/5">Puesto</th>
+            <th class="p-3.5 bg-slate-900 border-r border-white/5">Maestría / Programa</th>
+            <th class="p-3.5 bg-slate-900 border-r border-white/5">Ubicación (Dpto / Prov / Dist)</th>
+            <th class="p-3.5 bg-slate-900 border-r border-white/5 text-center">Satisfacción</th>
+            <th class="p-3.5 bg-slate-900 border-r border-white/5">Observaciones</th>
+            <th class="p-3.5 bg-slate-900 border-r border-white/5 text-center">Estado BD</th>
+            <th class="p-3.5 bg-slate-900 text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="excel-table-body" class="divide-y divide-white/5 text-slate-200">
+          <!-- Las filas se renderizan dinámicamente con JavaScript -->
+          <tr>
+            <td colspan="11" class="p-12 text-center text-slate-400">
+              <div class="flex flex-col items-center justify-center gap-3">
+                <span class="text-4xl">📋</span>
+                <p class="text-sm font-semibold">No hay respuestas registradas todavía.</p>
+                <p class="text-xs text-slate-500">Llene el formulario o presione "+ Cargar Demo" para ver la cuadrícula en acción.</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Detalle Completo de Respuesta -->
+  <div id="modal-detail" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="glass-card rounded-2xl p-6 sm:p-8 border border-white/10 max-w-2xl w-full shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Ficha Completa de Evaluación</span>
+          <h3 id="modal-detail-title" class="text-lg font-black text-white">Detalle del Participante</h3>
+        </div>
+        <button type="button" id="btn-close-detail-modal" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center">
+          ✕
+        </button>
+      </div>
+
+      <div id="modal-detail-content" class="space-y-4 text-xs">
+        <!-- Relleno dinámico -->
+      </div>
+
+      <div class="flex justify-end pt-4 border-t border-white/10">
+        <button type="button" id="btn-close-detail-modal-2" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-200 font-bold text-xs">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Client script for Excel table rendering, filtering and XLSX generation -->
+<script>
+  import { fetchAllResponses, getLocalResponses } from '../lib/supabase';
+  import { exportResponsesToExcel, exportResponsesToCSV } from '../lib/excel';
+  import { LIKERT_SCORE_MAP } from '../lib/constants';
+  import type { CapacitacionResponseRecord } from '../lib/types';
+
+  let allRecords: CapacitacionResponseRecord[] = [];
+  let filteredRecords: CapacitacionResponseRecord[] = [];
+
+  const tableBody = document.getElementById('excel-table-body');
+  const totalCountEl = document.getElementById('kpi-total-responses');
+  const avgSatEl = document.getElementById('kpi-satisfaction-avg');
+  const topDeptoEl = document.getElementById('kpi-top-depto');
+  const topMaestriaEl = document.getElementById('kpi-top-maestria');
+  const searchInput = document.getElementById('input-search-table') as HTMLInputElement;
+  const deptoFilter = document.getElementById('select-filter-depto') as HTMLSelectElement;
+  const countLabel = document.getElementById('label-showing-count');
+  const badgeSource = document.getElementById('excel-data-source-badge');
+  const badgeHeader = document.getElementById('badge-count-responses');
+
+  // Modal detalle
+  const modalDetail = document.getElementById('modal-detail');
+  const modalDetailTitle = document.getElementById('modal-detail-title');
+  const modalDetailContent = document.getElementById('modal-detail-content');
+  const btnCloseModal = document.getElementById('btn-close-detail-modal');
+  const btnCloseModal2 = document.getElementById('btn-close-detail-modal-2');
+
+  if (btnCloseModal && modalDetail) btnCloseModal.addEventListener('click', () => modalDetail.classList.add('hidden'));
+  if (btnCloseModal2 && modalDetail) btnCloseModal2.addEventListener('click', () => modalDetail.classList.add('hidden'));
+
+  export async function loadData() {
+    if (badgeSource) badgeSource.textContent = 'Consultando...';
+    try {
+      const { records, fromSupabase } = await fetchAllResponses();
+      allRecords = records;
+      filteredRecords = [...records];
+
+      if (badgeSource) {
+        badgeSource.textContent = fromSupabase ? 'Supabase Postgres' : 'Almacenamiento Local';
+        badgeSource.className = fromSupabase
+          ? 'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+          : 'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30';
+      }
+
+      if (badgeHeader) {
+        badgeHeader.textContent = String(allRecords.length);
+      }
+
+      updateDeptoFilterOptions();
+      calculateKpis();
+      renderTable();
+    } catch (e) {
+      console.error('Error al cargar datos:', e);
+    }
+  }
+
+  function updateDeptoFilterOptions() {
+    if (!deptoFilter) return;
+    const currentVal = deptoFilter.value;
+    const deptos = Array.from(new Set(allRecords.map(r => r.departamento).filter(Boolean))).sort();
+    
+    deptoFilter.innerHTML = '<option value="">Todos los Deptos</option>';
+    deptos.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d;
+      if (d === currentVal) opt.selected = true;
+      deptoFilter.appendChild(opt);
+    });
+  }
+
+  function calculateKpis() {
+    if (totalCountEl) totalCountEl.textContent = String(allRecords.length);
+
+    // Calcular satisfacción promedio
+    let totalScore = 0;
+    let scoreCount = 0;
+    const deptoCounts: Record<string, number> = {};
+    const maestriaCounts: Record<string, number> = {};
+
+    allRecords.forEach(r => {
+      if (r.satisfaccion_general && LIKERT_SCORE_MAP[r.satisfaccion_general]) {
+        totalScore += LIKERT_SCORE_MAP[r.satisfaccion_general];
+        scoreCount++;
+      }
+      if (r.departamento) {
+        deptoCounts[r.departamento] = (deptoCounts[r.departamento] || 0) + 1;
+      }
+      if (r.maestria) {
+        maestriaCounts[r.maestria] = (maestriaCounts[r.maestria] || 0) + 1;
+      }
+    });
+
+    if (avgSatEl) {
+      avgSatEl.textContent = scoreCount > 0 ? (totalScore / scoreCount).toFixed(1) : '0.0';
+    }
+
+    if (topDeptoEl) {
+      const sortedDeptos = Object.entries(deptoCounts).sort((a, b) => b[1] - a[1]);
+      topDeptoEl.textContent = sortedDeptos.length > 0 ? `${sortedDeptos[0][0]} (${sortedDeptos[0][1]})` : '-';
+    }
+
+    if (topMaestriaEl) {
+      const sortedMaestrias = Object.entries(maestriaCounts).sort((a, b) => b[1] - a[1]);
+      topMaestriaEl.textContent = sortedMaestrias.length > 0 ? sortedMaestrias[0][0] : '-';
+    }
+  }
+
+  function renderTable() {
+    if (!tableBody) return;
+
+    if (countLabel) {
+      countLabel.textContent = `Mostrando ${filteredRecords.length} de ${allRecords.length} registros`;
+    }
+
+    if (filteredRecords.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="11" class="p-10 text-center text-slate-400">
+            <p class="text-sm font-semibold">No se encontraron respuestas con los filtros seleccionados.</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tableBody.innerHTML = filteredRecords.map((r, i) => {
+      const satBadge = getRatingBadge(r.satisfaccion_general);
+      const syncBadge = r.sync_status === 'synced'
+        ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Supabase</span>'
+        : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">Local</span>';
+
+      const dateStr = r.created_at ? new Date(r.created_at).toLocaleDateString('es-PE', { hour: '2-digit', minute: '2-digit' }) : '-';
+
+      return `
+        <tr class="hover:bg-slate-900/80 transition-colors">
+          <td class="p-3.5 text-center font-mono text-slate-400 border-r border-white/5">${i + 1}</td>
+          <td class="p-3.5 font-bold text-white border-r border-white/5">
+            <div>${escapeHtml(r.apellidosNombres)}</div>
+            <div class="text-[10px] text-slate-400 font-normal">${dateStr}</div>
+          </td>
+          <td class="p-3.5 font-mono text-slate-300 border-r border-white/5">${escapeHtml(r.correo)}</td>
+          <td class="p-3.5 text-slate-300 border-r border-white/5">${escapeHtml(r.celular || '-')}</td>
+          <td class="p-3.5 text-slate-300 border-r border-white/5">${escapeHtml(r.puestoTrabajo || '-')}</td>
+          <td class="p-3.5 text-slate-200 border-r border-white/5 max-w-[220px] truncate" title="${escapeHtml(r.maestria)}">
+            ${escapeHtml(r.maestria || '-')}
+          </td>
+          <td class="p-3.5 text-slate-300 border-r border-white/5">
+            ${escapeHtml(r.departamento || '-')}, ${escapeHtml(r.provincia || '-')}, ${escapeHtml(r.distrito || '-')}
+          </td>
+          <td class="p-3.5 text-center border-r border-white/5">${satBadge}</td>
+          <td class="p-3.5 text-slate-300 border-r border-white/5 max-w-[180px] truncate" title="${escapeHtml(r.observaciones_sugerencias || '-')}">
+            ${escapeHtml(r.observaciones_sugerencias || '-')}
+          </td>
+          <td class="p-3.5 text-center border-r border-white/5">${syncBadge}</td>
+          <td class="p-3.5 text-center">
+            <button
+              type="button"
+              class="btn-view-detail px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 text-xs font-semibold transition-all border border-blue-500/30"
+              data-record-id="${r.id}"
+            >
+              Ver Ficha
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Attach click events to detail buttons
+    document.querySelectorAll<HTMLButtonElement>('.btn-view-detail').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-record-id');
+        const rec = allRecords.find(r => r.id === id);
+        if (rec) showDetailModal(rec);
+      });
+    });
+  }
+
+  function getRatingBadge(val: string) {
+    if (!val) return '<span class="text-slate-500">-</span>';
+    const map: Record<string, string> = {
+      'MUY BUENO': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      'BUENO': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+      'REGULAR': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+      'DEFICIENTE': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+      'MUY DEFICIENTE': 'bg-red-500/20 text-red-300 border-red-500/30'
+    };
+    const cls = map[val] || 'bg-slate-800 text-slate-300';
+    return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${cls}">${val}</span>`;
+  }
+
+  function showDetailModal(r: CapacitacionResponseRecord) {
+    if (!modalDetail || !modalDetailTitle || !modalDetailContent) return;
+
+    modalDetailTitle.textContent = r.apellidosNombres;
+    modalDetailContent.innerHTML = `
+      <div class="grid grid-cols-2 gap-3 p-3 bg-slate-900 rounded-xl border border-white/10">
+        <div><span class="text-slate-400">Correo:</span> <strong class="text-white">${escapeHtml(r.correo)}</strong></div>
+        <div><span class="text-slate-400">Celular:</span> <strong class="text-white">${escapeHtml(r.celular)}</strong></div>
+        <div><span class="text-slate-400">Edad / Sexo:</span> <strong class="text-white">${escapeHtml(r.edad)} años / ${escapeHtml(r.sexo)}</strong></div>
+        <div><span class="text-slate-400">Puesto:</span> <strong class="text-white">${escapeHtml(r.puestoTrabajo)}</strong></div>
+        <div class="col-span-2"><span class="text-slate-400">Programa:</span> <strong class="text-white">${escapeHtml(r.maestria)}</strong></div>
+        <div class="col-span-2"><span class="text-slate-400">Ubicación:</span> <strong class="text-white">${escapeHtml(r.departamento)} → ${escapeHtml(r.provincia)} → ${escapeHtml(r.distrito)}</strong></div>
+      </div>
+
+      <div class="space-y-2 pt-2">
+        <p class="font-bold text-white text-xs uppercase tracking-wider text-blue-400">Calificaciones del Evento</p>
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+          <div class="p-2 bg-slate-900/60 rounded-lg">Org. Horario: <strong>${r.organizacion_horario}</strong></div>
+          <div class="p-2 bg-slate-900/60 rounded-lg">Org. Instalaciones: <strong>${r.organizacion_instalaciones}</strong></div>
+          <div class="p-2 bg-slate-900/60 rounded-lg">Org. Audiovisuales: <strong>${r.organizacion_audiovisuales}</strong></div>
+          <div class="p-2 bg-slate-900/60 rounded-lg">Cap. Tema: <strong>${r.capacitador_tema}</strong></div>
+          <div class="p-2 bg-slate-900/60 rounded-lg">Cap. Dominio: <strong>${r.capacitador_dominio}</strong></div>
+          <div class="p-2 bg-slate-900/60 rounded-lg">Cap. Metodología: <strong>${r.capacitador_metodologia}</strong></div>
+          <div class="p-2 bg-slate-900/60 rounded-lg">Cap. Tiempo: <strong>${r.capacitador_tiempo}</strong></div>
+          <div class="p-2 bg-slate-900/60 rounded-lg">Doc. Calidad: <strong>${r.documentacion_calidad}</strong></div>
+          <div class="p-2 bg-slate-900/60 rounded-lg">Doc. Contenido: <strong>${r.documentacion_contenido}</strong></div>
+          <div class="p-2 bg-emerald-950/40 rounded-lg border border-emerald-500/20">Satisfacción General: <strong class="text-emerald-400">${r.satisfaccion_general}</strong></div>
+        </div>
+      </div>
+
+      <div class="pt-2">
+        <p class="font-bold text-white text-xs uppercase tracking-wider text-slate-400 mb-1">Observaciones / Sugerencias:</p>
+        <div class="p-3 bg-slate-900 rounded-xl border border-white/10 text-slate-300 italic">
+          ${escapeHtml(r.observaciones_sugerencias || 'Sin observaciones.')}
+        </div>
+      </div>
+    `;
+
+    modalDetail.classList.remove('hidden');
+  }
+
+  function escapeHtml(str: string) {
+    if (!str) return '';
+    return str.replace(/[&<>"']/g, m => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[m] || m));
+  }
+
+  // Filtros
+  function applyFilters() {
+    const q = (searchInput?.value || '').toLowerCase().trim();
+    const depto = deptoFilter?.value || '';
+
+    filteredRecords = allRecords.filter(r => {
+      const matchSearch = !q || (
+        r.apellidosNombres.toLowerCase().includes(q) ||
+        r.correo.toLowerCase().includes(q) ||
+        r.distrito.toLowerCase().includes(q) ||
+        r.puestoTrabajo.toLowerCase().includes(q) ||
+        r.maestria.toLowerCase().includes(q)
+      );
+
+      const matchDepto = !depto || r.departamento === depto;
+      return matchSearch && matchDepto;
+    });
+
+    renderTable();
+  }
+
+  if (searchInput) searchInput.addEventListener('input', applyFilters);
+  if (deptoFilter) deptoFilter.addEventListener('change', applyFilters);
+
+  // Exportar XLSX
+  const btnXlsx = document.getElementById('btn-export-xlsx');
+  if (btnXlsx) {
+    btnXlsx.addEventListener('click', () => {
+      exportResponsesToExcel(filteredRecords);
+    });
+  }
+
+  // Exportar CSV
+  const btnCsv = document.getElementById('btn-export-csv');
+  if (btnCsv) {
+    btnCsv.addEventListener('click', () => {
+      exportResponsesToCSV(filteredRecords);
+    });
+  }
+
+  // Recargar datos
+  const btnRefresh = document.getElementById('btn-refresh-data');
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', () => {
+      loadData();
+    });
+  }
+
+  // Cargar datos demo
+  const btnDemo = document.getElementById('btn-load-demo-data');
+  if (btnDemo) {
+    btnDemo.addEventListener('click', () => {
+      const demoList: CapacitacionResponseRecord[] = [
+        {
+          id: 'demo-1',
+          created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+          sync_status: 'synced',
+          apellidosNombres: 'Chumacero Ramos, Carlos Enrique',
+          correo: 'carlos.chumacero@uss.edu.pe',
+          puestoTrabajo: 'Docente Asociado',
+          expositor: 'Equipo de Calidad y Acreditación USS',
+          nombreCapacitacion: 'Estándares ISO Core del Sistema: SGC USS, Modelo de SUNEDU - Plan de Supervisión',
+          sexo: 'MASCULINO',
+          edad: '44',
+          celular: '979123456',
+          maestria: 'Maestría en Educación con mención en Gestión y Liderazgo Pedagógico',
+          departamento: 'LAMBAYEQUE',
+          provincia: 'CHICLAYO',
+          distrito: 'Pimentel (Campus USS)',
+          organizacion_horario: 'MUY BUENO',
+          organizacion_instalaciones: 'MUY BUENO',
+          organizacion_audiovisuales: 'BUENO',
+          capacitador_tema: 'MUY BUENO',
+          capacitador_dominio: 'MUY BUENO',
+          capacitador_metodologia: 'MUY BUENO',
+          capacitador_tiempo: 'BUENO',
+          documentacion_calidad: 'MUY BUENO',
+          documentacion_contenido: 'MUY BUENO',
+          satisfaccion_general: 'MUY BUENO',
+          observaciones_sugerencias: 'Excelente capacitación, las matrices de calidad SUNEDU quedaron muy claras.'
+        },
+        {
+          id: 'demo-2',
+          created_at: new Date(Date.now() - 3600000 * 5).toISOString(),
+          sync_status: 'synced',
+          apellidosNombres: 'Villalobos Díaz, María Alejandra',
+          correo: 'maria.villalobos@uss.edu.pe',
+          puestoTrabajo: 'Coordinadora Académica',
+          expositor: 'Equipo de Calidad y Acreditación USS',
+          nombreCapacitacion: 'Estándares ISO Core del Sistema: SGC USS, Modelo de SUNEDU - Plan de Supervisión',
+          sexo: 'FEMENINO',
+          edad: '38',
+          celular: '974889922',
+          maestria: 'Maestría en Gestión Pública',
+          departamento: 'LAMBAYEQUE',
+          provincia: 'CHICLAYO',
+          distrito: 'Chiclayo',
+          organizacion_horario: 'BUENO',
+          organizacion_instalaciones: 'MUY BUENO',
+          organizacion_audiovisuales: 'MUY BUENO',
+          capacitador_tema: 'MUY BUENO',
+          capacitador_dominio: 'MUY BUENO',
+          capacitador_metodologia: 'BUENO',
+          capacitador_tiempo: 'MUY BUENO',
+          documentacion_calidad: 'BUENO',
+          documentacion_contenido: 'MUY BUENO',
+          satisfaccion_general: 'MUY BUENO',
+          observaciones_sugerencias: 'Muy buena exposición, sugeriría enviar las diapositivas también por correo.'
+        },
+        {
+          id: 'demo-3',
+          created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
+          sync_status: 'local_only',
+          apellidosNombres: 'Santisteban Farro, Jorge Luis',
+          correo: 'jorge.santisteban@crece.uss.edu.pe',
+          puestoTrabajo: 'Jefe de Laboratorio TI',
+          expositor: 'Equipo de Calidad y Acreditación USS',
+          nombreCapacitacion: 'Estándares ISO Core del Sistema: SGC USS, Modelo de SUNEDU - Plan de Supervisión',
+          sexo: 'MASCULINO',
+          edad: '31',
+          celular: '988554411',
+          maestria: 'Maestría en Ingeniería de Sistemas con mención en Gestión de TI',
+          departamento: 'LAMBAYEQUE',
+          provincia: 'FERREÑAFE',
+          distrito: 'Ferreñafe',
+          organizacion_horario: 'BUENO',
+          organizacion_instalaciones: 'REGULAR',
+          organizacion_audiovisuales: 'BUENO',
+          capacitador_tema: 'MUY BUENO',
+          capacitador_dominio: 'MUY BUENO',
+          capacitador_metodologia: 'MUY BUENO',
+          capacitador_tiempo: 'BUENO',
+          documentacion_calidad: 'BUENO',
+          documentacion_contenido: 'BUENO',
+          satisfaccion_general: 'BUENO',
+          observaciones_sugerencias: 'Mejorar la conexión wifi durante los talleres prácticos.'
+        }
+      ];
+
+      const current = getLocalResponses();
+      localStorage.setItem('uss_capacitacion_responses', JSON.stringify([...demoList, ...current]));
+      loadData();
+    });
+  }
+
+  // Limpiar
+  const btnClear = document.getElementById('btn-clear-local-data');
+  if (btnClear) {
+    btnClear.addEventListener('click', () => {
+      if (confirm('¿Desea limpiar los datos almacenados localmente?')) {
+        localStorage.removeItem('uss_capacitacion_responses');
+        loadData();
+      }
+    });
+  }
+
+  // Evento global cuando se guarda una respuesta desde el FormWizard
+  window.addEventListener('uss:response_saved', () => {
+    loadData();
+  });
+
+  // Carga inicial
+  loadData();
+</script>

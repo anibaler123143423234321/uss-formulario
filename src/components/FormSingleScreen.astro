@@ -1,0 +1,667 @@
+---
+import { MAESTRIAS_USS, CAPACITACION_DEFAULT, LIKERT_OPTIONS } from '../lib/constants';
+import { LOCAL_DEPARTAMENTOS } from '../lib/ubigeo';
+
+const LIKERT_COLUMNS = [
+  { label: 'MUY BUENO', value: 'MUY BUENO' },
+  { label: 'BUENO', value: 'BUENO' },
+  { label: 'REGULAR', value: 'REGULAR' },
+  { label: 'DEFICIENTE', value: 'DEFICIENTE' },
+  { label: 'MUY DEFICIENTE', value: 'MUY DEFICIENTE' }
+];
+
+const PREGUNTAS_ORGANIZACION = [
+  { name: 'organizacion_horario', label: 'El horario y duración de la capacitación.' },
+  { name: 'organizacion_instalaciones', label: 'Las instalaciones donde se realizó la capacitación.' },
+  { name: 'organizacion_audiovisuales', label: 'Los medios audiovisuales.' }
+];
+
+const PREGUNTAS_CAPACITADOR = [
+  { name: 'capacitador_tema', label: 'La selección del tema tratado por el expositor.' },
+  { name: 'capacitador_dominio', label: 'El dominio del expositor.' },
+  { name: 'capacitador_metodologia', label: 'La metodología del trabajo.' },
+  { name: 'capacitador_tiempo', label: 'El tiempo de participación del expositor.' }
+];
+
+const PREGUNTAS_DOCUMENTACION = [
+  { name: 'documentacion_calidad', label: 'La calidad de las diapositivas y recursos utilizados.' },
+  { name: 'documentacion_contenido', label: 'El contenido de las diapositivas.' }
+];
+---
+
+<div class="w-full max-w-7xl mx-auto space-y-5">
+  <form id="uss-capacitacion-form" class="space-y-5">
+
+    <!-- ========================================================================= -->
+    <!-- FILA 1: FORMULARIO DE CAPACITACIÓN (ATRIBUTOS DEL BOCETO MANUSCRITO) -->
+    <!-- ========================================================================= -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+      
+      <div class="flex flex-wrap items-center justify-between border-b border-slate-100 pb-3 gap-2">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center font-black text-sm border border-blue-200">
+            USS
+          </span>
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900 leading-tight">Formulario de Capacitación</h2>
+            <p class="text-xs text-slate-500">Atributos del participante y datos del evento</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-slate-500 font-medium">Evento:</span>
+          <span class="font-bold text-slate-800 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200 truncate max-w-md" title={CAPACITACION_DEFAULT.nombre}>
+            {CAPACITACION_DEFAULT.nombre}
+          </span>
+        </div>
+      </div>
+
+      <!-- Inputs ocultos con datos del evento -->
+      <input type="hidden" name="nombreCapacitacion" value={CAPACITACION_DEFAULT.nombre} />
+      <input type="hidden" name="expositor" value={CAPACITACION_DEFAULT.expositor} />
+
+      <!-- Campos de Atributos: Correo y Género lado a lado -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+        <div class="md:col-span-8">
+          <label for="correo" class="block text-xs font-bold text-slate-700 mb-1">
+            Correo <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="email"
+            id="correo"
+            name="correo"
+            required
+            placeholder="ejemplo@crece.uss.edu.pe"
+            class="custom-input-light"
+          />
+        </div>
+
+        <div class="md:col-span-4">
+          <label class="block text-xs font-bold text-slate-700 mb-1">
+            Género <span class="text-red-500">*</span>
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg border border-slate-200 bg-slate-50/70 cursor-pointer hover:border-blue-400 text-xs font-semibold text-slate-700 has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600 transition-all text-center">
+              <input type="radio" name="sexo" value="MASCULINO" required class="hidden" />
+              <span>Hombre</span>
+            </label>
+            <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg border border-slate-200 bg-slate-50/70 cursor-pointer hover:border-blue-400 text-xs font-semibold text-slate-700 has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-600 transition-all text-center">
+              <input type="radio" name="sexo" value="FEMENINO" class="hidden" />
+              <span>Mujer</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nombres, Apellidos y Celular -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div>
+          <label for="nombres" class="block text-xs font-bold text-slate-700 mb-1">
+            Nombres <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="nombres"
+            name="nombres"
+            required
+            placeholder="Juan Carlos"
+            class="custom-input-light"
+          />
+        </div>
+
+        <div>
+          <label for="apellidos" class="block text-xs font-bold text-slate-700 mb-1">
+            Apellidos <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="apellidos"
+            name="apellidos"
+            required
+            placeholder="Pérez Salazar"
+            class="custom-input-light"
+          />
+        </div>
+
+        <div>
+          <label for="celular" class="block text-xs font-bold text-slate-700 mb-1">
+            Celular <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="tel"
+            id="celular"
+            name="celular"
+            required
+            placeholder="987654321"
+            maxlength="12"
+            class="custom-input-light"
+          />
+        </div>
+      </div>
+
+      <!-- Edad, Puesto y Maestría -->
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
+        <div class="sm:col-span-2">
+          <label for="edad" class="block text-xs font-bold text-slate-700 mb-1">
+            Edad <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            id="edad"
+            name="edad"
+            required
+            min="17"
+            max="99"
+            placeholder="32"
+            class="custom-input-light"
+          />
+        </div>
+
+        <div class="sm:col-span-4">
+          <label for="puestoTrabajo" class="block text-xs font-bold text-slate-700 mb-1">
+            Puesto de Trabajo
+          </label>
+          <input
+            type="text"
+            id="puestoTrabajo"
+            name="puestoTrabajo"
+            placeholder="Docente / Administrativo (opcional)"
+            class="custom-input-light"
+          />
+        </div>
+
+        <div class="sm:col-span-6">
+          <label for="maestria" class="block text-xs font-bold text-slate-700 mb-1">
+            Maestría (lista) <span class="text-red-500">*</span>
+          </label>
+          <select id="maestria" name="maestria" required class="custom-input-light">
+            <option value="">-- Seleccione Maestría / Programa USS --</option>
+            {MAESTRIAS_USS.map((m) => (
+              <option value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <!-- Ubicación: Dpto, Prov, Distrito (cascada) -->
+      <div class="pt-2 border-t border-slate-100">
+        <div class="mb-1.5">
+          <label class="text-xs font-bold text-slate-700">
+            Ciudad / Ubicación (Dpto, Prov, Distrito) <span class="text-red-500">*</span>
+          </label>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <select id="departamento" name="departamento" required class="custom-input-light text-xs">
+              <option value="">Dpto: Seleccionar</option>
+              {LOCAL_DEPARTAMENTOS.map((d) => (
+                <option value={d.name}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <select id="provincia" name="provincia" required disabled class="custom-input-light text-xs">
+              <option value="">Prov: Primero elija Dpto</option>
+            </select>
+          </div>
+          <div>
+            <select id="distrito" name="distrito" required disabled class="custom-input-light text-xs">
+              <option value="">Distrito: Primero elija Prov</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- FILA 2 (PRIMERA IMAGEN: IZQUIERDA Y DERECHA) -->
+    <!-- IZQUIERDA: ORGANIZACIÓN | DERECHA: DESARROLLO DEL EVENTO: EL CAPACITADOR -->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      
+      <!-- IZQUIERDA: ORGANIZACIÓN * -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+        <h3 class="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-1">
+          <span>ORGANIZACIÓN</span>
+          <span class="text-red-500">*</span>
+        </h3>
+
+        <!-- Matriz Tabla tipo Google Forms -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr class="text-[10px] text-slate-500 font-extrabold text-center uppercase tracking-tight">
+                <th class="p-2 text-left w-1/3"></th>
+                {LIKERT_COLUMNS.map((col) => (
+                  <th class="p-2 w-[13.4%] leading-tight text-slate-600">
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {PREGUNTAS_ORGANIZACION.map((q, idx) => (
+                <tr class={idx % 2 === 0 ? "bg-slate-50/50 hover:bg-blue-50/40 transition-colors" : "bg-white hover:bg-blue-50/40 transition-colors"}>
+                  <td class="p-2.5 font-medium text-slate-800 pr-2">
+                    {q.label}
+                  </td>
+                  {LIKERT_COLUMNS.map((col) => (
+                    <td class="p-2.5 text-center">
+                      <label class="inline-flex items-center justify-center p-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={q.name}
+                          value={col.value}
+                          required
+                          class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+                        />
+                      </label>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DERECHA: DESARROLLO DEL EVENTO: EL CAPACITADOR * -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+        <h3 class="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-1">
+          <span>DESARROLLO DEL EVENTO: EL CAPACITADOR</span>
+          <span class="text-red-500">*</span>
+        </h3>
+
+        <!-- Matriz Tabla tipo Google Forms -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr class="text-[10px] text-slate-500 font-extrabold text-center uppercase tracking-tight">
+                <th class="p-2 text-left w-1/3"></th>
+                {LIKERT_COLUMNS.map((col) => (
+                  <th class="p-2 w-[13.4%] leading-tight text-slate-600">
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {PREGUNTAS_CAPACITADOR.map((q, idx) => (
+                <tr class={idx % 2 === 0 ? "bg-slate-50/50 hover:bg-blue-50/40 transition-colors" : "bg-white hover:bg-blue-50/40 transition-colors"}>
+                  <td class="p-2.5 font-medium text-slate-800 pr-2">
+                    {q.label}
+                  </td>
+                  {LIKERT_COLUMNS.map((col) => (
+                    <td class="p-2.5 text-center">
+                      <label class="inline-flex items-center justify-center p-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={q.name}
+                          value={col.value}
+                          required
+                          class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+                        />
+                      </label>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- FILA 3 (SEGUNDA IMAGEN: IZQUIERDA Y DERECHA) -->
+    <!-- IZQUIERDA: DOCUMENTACIÓN | DERECHA: SATISFACCIÓN + OBSERVACIONES + ENVIAR -->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      
+      <!-- IZQUIERDA: DOCUMENTACIÓN DE LA CAPACITACIÓN * -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+        <h3 class="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-1">
+          <span>DOCUMENTACIÓN DE LA CAPACITACIÓN</span>
+          <span class="text-red-500">*</span>
+        </h3>
+
+        <!-- Matriz Tabla tipo Google Forms -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr class="text-[10px] text-slate-500 font-extrabold text-center uppercase tracking-tight">
+                <th class="p-2 text-left w-1/3"></th>
+                {LIKERT_COLUMNS.map((col) => (
+                  <th class="p-2 w-[13.4%] leading-tight text-slate-600">
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {PREGUNTAS_DOCUMENTACION.map((q, idx) => (
+                <tr class={idx % 2 === 0 ? "bg-slate-50/50 hover:bg-blue-50/40 transition-colors" : "bg-white hover:bg-blue-50/40 transition-colors"}>
+                  <td class="p-2.5 font-medium text-slate-800 pr-2">
+                    {q.label}
+                  </td>
+                  {LIKERT_COLUMNS.map((col) => (
+                    <td class="p-2.5 text-center">
+                      <label class="inline-flex items-center justify-center p-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={q.name}
+                          value={col.value}
+                          required
+                          class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+                        />
+                      </label>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DERECHA: SATISFACCIÓN GENERAL * + OBSERVACIONES + BOTÓN ENVIAR -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4 flex flex-col justify-between">
+        
+        <div class="space-y-4">
+          <!-- SATISFACCIÓN GENERAL * -->
+          <div class="space-y-2">
+            <h3 class="text-sm font-extrabold text-slate-900 tracking-tight flex items-center gap-1">
+              <span>SATISFACCIÓN GENERAL</span>
+              <span class="text-red-500">*</span>
+            </h3>
+
+            <!-- Matriz Tabla tipo Google Forms -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr class="text-[10px] text-slate-500 font-extrabold text-center uppercase tracking-tight">
+                    <th class="p-2 text-left w-1/3"></th>
+                    {LIKERT_COLUMNS.map((col) => (
+                      <th class="p-2 w-[13.4%] leading-tight text-slate-600">
+                        {col.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="bg-slate-50/50 hover:bg-blue-50/40 transition-colors">
+                    <td class="p-2.5 font-medium text-slate-800 pr-2">
+                      Evaluación general de la capacitación
+                    </td>
+                    {LIKERT_COLUMNS.map((col) => (
+                      <td class="p-2.5 text-center">
+                        <label class="inline-flex items-center justify-center p-1.5 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="satisfaccion_general"
+                            value={col.value}
+                            required
+                            class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+                          />
+                        </label>
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Observación y/o Sugerencias: * -->
+          <div class="space-y-1.5 pt-1">
+            <label for="observaciones_sugerencias" class="block text-xs font-bold text-slate-900">
+              Observación y/o Sugerencias: <span class="text-red-500">*</span>
+            </label>
+            <textarea
+              id="observaciones_sugerencias"
+              name="observaciones_sugerencias"
+              rows="2"
+              required
+              placeholder="Tu respuesta"
+              class="w-full bg-slate-50/60 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600 transition-all resize-none"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Botón Enviar destacado (Círculo con flecha del boceto) -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+          <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Sistema Institucional USS</span>
+          </div>
+
+          <div class="relative group">
+            <button
+              type="submit"
+              id="btn-submit-single"
+              class="flex items-center gap-2 px-7 py-3 rounded-xl bg-blue-700 hover:bg-blue-800 active:scale-95 text-white font-extrabold text-sm shadow-md shadow-blue-900/20 transition-all cursor-pointer"
+            >
+              <span>Enviar</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+            <div class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-white animate-pulse" title="Enviar formulario"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </form>
+
+  <!-- MODAL DE ÉXITO TRAS ENVIAR -->
+  <div id="single-success-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full border border-slate-200 shadow-2xl text-center space-y-4">
+      <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-3xl border border-emerald-200">
+        ✓
+      </div>
+      <div class="space-y-1">
+        <h3 class="text-xl font-extrabold text-slate-900">¡Evaluación Registrada!</h3>
+        <p class="text-xs text-slate-600">
+          Su respuesta ha sido registrada exitosamente en el sistema de la <strong>Universidad Señor de Sipán</strong>.
+        </p>
+      </div>
+
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1 text-left">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Estado:</span>
+          <span id="single-success-sync" class="font-bold text-emerald-600">Registrado con éxito</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Hora de registro:</span>
+          <span id="single-success-time" class="font-mono text-slate-800"></span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        id="btn-single-reset"
+        class="w-full py-2.5 px-4 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs transition-all shadow cursor-pointer"
+      >
+        Registrar otra respuesta
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Script para carga de cascada de Ubigeos y envío -->
+<script>
+  import { getDepartamentos, getProvincias, getDistritos } from '../lib/ubigeo';
+  import { submitCapacitacionResponse } from '../lib/supabase';
+  import confetti from 'canvas-confetti';
+
+  const selDepto = document.getElementById('departamento') as HTMLSelectElement;
+  const selProv = document.getElementById('provincia') as HTMLSelectElement;
+  const selDist = document.getElementById('distrito') as HTMLSelectElement;
+
+  async function initUbigeos() {
+    try {
+      const deptos = await getDepartamentos();
+      if (selDepto && deptos.length > 0) {
+        selDepto.innerHTML = '<option value="">Dpto: Seleccionar</option>';
+        deptos.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.name;
+          opt.textContent = d.name;
+          selDepto.appendChild(opt);
+        });
+      }
+    } catch (e) {
+      console.warn('Error al cargar departamentos:', e);
+    }
+  }
+
+  if (selDepto && selProv && selDist) {
+    selDepto.addEventListener('change', async () => {
+      const depto = selDepto.value;
+      selProv.innerHTML = '<option value="">Cargando provincias...</option>';
+      selProv.disabled = true;
+      selDist.innerHTML = '<option value="">Distrito: Primero elija Prov</option>';
+      selDist.disabled = true;
+
+      if (!depto) {
+        selProv.innerHTML = '<option value="">Prov: Primero elija Dpto</option>';
+        return;
+      }
+
+      const provs = await getProvincias(depto);
+      selProv.innerHTML = '<option value="">Prov: Seleccionar</option>';
+      provs.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        selProv.appendChild(opt);
+      });
+      selProv.disabled = false;
+    });
+
+    selProv.addEventListener('change', async () => {
+      const prov = selProv.value;
+      const depto = selDepto.value;
+      selDist.innerHTML = '<option value="">Cargando distritos...</option>';
+      selDist.disabled = true;
+
+      if (!prov) {
+        selDist.innerHTML = '<option value="">Distrito: Primero elija Prov</option>';
+        return;
+      }
+
+      const dists = await getDistritos(prov, depto);
+      selDist.innerHTML = '<option value="">Distrito: Seleccionar</option>';
+      dists.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.name;
+        opt.textContent = d.name;
+        selDist.appendChild(opt);
+      });
+      selDist.disabled = false;
+    });
+  }
+
+  // Envío del Formulario
+  const form = document.getElementById('uss-capacitacion-form') as HTMLFormElement;
+  const successModal = document.getElementById('single-success-modal');
+  const btnReset = document.getElementById('btn-single-reset');
+
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const btnSubmit = document.getElementById('btn-submit-single') as HTMLButtonElement;
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span>⏳ Guardando...</span>';
+      }
+
+      const formData = new FormData(form);
+
+      const payload: any = {
+        apellidosNombres: `${formData.get('apellidos') || ''}, ${formData.get('nombres') || ''}`.trim(),
+        correo: formData.get('correo') as string,
+        puestoTrabajo: formData.get('puestoTrabajo') as string,
+        expositor: formData.get('expositor') as string,
+        nombreCapacitacion: formData.get('nombreCapacitacion') as string,
+        sexo: formData.get('sexo') as string,
+        edad: formData.get('edad') as string,
+        celular: formData.get('celular') as string,
+        maestria: formData.get('maestria') as string,
+        departamento: formData.get('departamento') as string,
+        provincia: formData.get('provincia') as string,
+        distrito: formData.get('distrito') as string,
+        
+        organizacion_horario: formData.get('organizacion_horario') as string,
+        organizacion_instalaciones: formData.get('organizacion_instalaciones') as string,
+        organizacion_audiovisuales: formData.get('organizacion_audiovisuales') as string,
+
+        capacitador_tema: formData.get('capacitador_tema') as string,
+        capacitador_dominio: formData.get('capacitador_dominio') as string,
+        capacitador_metodologia: formData.get('capacitador_metodologia') as string,
+        capacitador_tiempo: formData.get('capacitador_tiempo') as string,
+
+        documentacion_calidad: formData.get('documentacion_calidad') as string,
+        documentacion_contenido: formData.get('documentacion_contenido') as string,
+
+        satisfaccion_general: formData.get('satisfaccion_general') as string,
+        observaciones_sugerencias: formData.get('observaciones_sugerencias') as string
+      };
+
+      try {
+        const res = await submitCapacitacionResponse(payload);
+
+        confetti({
+          particleCount: 80,
+          spread: 60,
+          origin: { y: 0.6 }
+        });
+
+        if (successModal) {
+          successModal.classList.remove('hidden');
+          const syncEl = document.getElementById('single-success-sync');
+          const timeEl = document.getElementById('single-success-time');
+          if (syncEl) {
+            syncEl.textContent = 'Registrado con éxito';
+            syncEl.className = 'font-bold text-emerald-600';
+          }
+          if (timeEl) {
+            timeEl.textContent = new Date().toLocaleString('es-PE');
+          }
+        }
+
+      } catch (err: any) {
+        alert('Error al guardar: ' + (err.message || err));
+      } finally {
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = '<span>Enviar</span>';
+        }
+      }
+    });
+  }
+
+  if (btnReset && form && successModal) {
+    btnReset.addEventListener('click', () => {
+      form.reset();
+      selProv.innerHTML = '<option value="">Prov: Primero elija Dpto</option>';
+      selProv.disabled = true;
+      selDist.innerHTML = '<option value="">Distrito: Primero elija Prov</option>';
+      selDist.disabled = true;
+      successModal.classList.add('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  initUbigeos();
+</script>

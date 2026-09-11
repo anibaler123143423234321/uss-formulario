@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --color-uss-blue: #0b3c7d;
+  --color-uss-blue-light: #1d68bd;
+  --color-uss-gold: #e59300;
+  --color-uss-gold-light: #f59e0b;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #ffffff;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color: #0f172a;
+}
+
+/* Custom scrollbar para tema claro */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Input base para tema blanco */
+.custom-input-light {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+  outline: none;
+}
+.custom-input-light:focus {
+  border-color: #0b3c7d;
+  box-shadow: 0 0 0 3px rgba(11, 60, 125, 0.15);
+  background-color: #ffffff;
+}
+.custom-input-light::placeholder {
+  color: #94a3b8;
+}
+
+/* Select styling */
+select.custom-input-light {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2rem;
+}

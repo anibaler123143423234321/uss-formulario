@@ -1,0 +1,218 @@
+---
+// ConfigModal.astro - Tema Blanco
+---
+
+<div id="supabase-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200 max-w-lg w-full shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+    
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center text-lg border border-blue-200">
+          ⚡
+        </div>
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900">Configuración de Supabase</h3>
+          <p class="text-xs text-slate-500">Conecte su proyecto PostgreSQL para almacenar respuestas</p>
+        </div>
+      </div>
+      <button type="button" id="btn-close-supabase-modal" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xs font-bold">
+        ✕
+      </button>
+    </div>
+
+    <!-- Feedback Banner -->
+    <div id="supabase-test-feedback" class="p-3 rounded-xl border text-xs hidden"></div>
+
+    <!-- Formulario de Credenciales -->
+    <form id="supabase-config-form" class="space-y-3.5">
+      <div>
+        <label for="cfg-supabase-url" class="block text-xs font-bold text-slate-700 mb-1">
+          Project URL <span class="text-red-500">*</span>
+        </label>
+        <input
+          type="url"
+          id="cfg-supabase-url"
+          name="url"
+          placeholder="https://xyzcompany.supabase.co"
+          class="custom-input-light font-mono text-xs"
+          required
+        />
+        <p class="text-[10px] text-slate-400 mt-0.5">Encontrado en: Dashboard &gt; Project Settings &gt; API</p>
+      </div>
+
+      <div>
+        <label for="cfg-supabase-anon-key" class="block text-xs font-bold text-slate-700 mb-1">
+          Anon / Public API Key <span class="text-red-500">*</span>
+        </label>
+        <input
+          type="password"
+          id="cfg-supabase-anon-key"
+          name="anonKey"
+          placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          class="custom-input-light font-mono text-xs"
+          required
+        />
+        <p class="text-[10px] text-slate-400 mt-0.5">Encontrado en: Project Settings &gt; API &gt; Project API keys</p>
+      </div>
+
+      <div class="flex items-center gap-2 pt-1">
+        <button
+          type="button"
+          id="btn-test-supabase-conn"
+          class="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-bold text-xs transition-all"
+        >
+          🔍 Probar Conexión
+        </button>
+
+        <button
+          type="submit"
+          class="flex-1 py-2 px-3 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs shadow transition-all"
+        >
+          💾 Guardar
+        </button>
+      </div>
+    </form>
+
+    <!-- Sección Scripts SQL para Supabase -->
+    <div class="pt-3 border-t border-slate-100 space-y-2">
+      <div class="flex items-center gap-1.5">
+        <span class="text-amber-600 text-sm">📜</span>
+        <h4 class="text-xs font-bold text-slate-800">
+          Scripts SQL para Supabase (PostgreSQL)
+        </h4>
+      </div>
+      <p class="text-[11px] text-slate-500 leading-relaxed">
+        Copie y ejecute estos scripts en el <strong>SQL Editor</strong> de Supabase para crear las tablas:
+      </p>
+
+      <div class="space-y-2 text-xs">
+        <button
+          type="button"
+          id="btn-copy-full-sql"
+          class="w-full flex items-center justify-between p-3 rounded-xl bg-blue-50/70 hover:bg-blue-100/70 border border-blue-200 text-blue-950 font-semibold transition-all group text-left cursor-pointer"
+        >
+          <div>
+            <p class="font-bold text-xs text-blue-900">📄 Copiar Script Completo (supabase.sql)</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Crea tabla de respuestas + 1,892 distritos oficiales del Perú + políticas de seguridad</p>
+          </div>
+          <span class="text-base group-hover:scale-110 transition-transform">📋</span>
+        </button>
+      </div>
+
+      <p id="sql-copy-status" class="text-[11px] text-center text-emerald-600 font-bold hidden">
+        ¡Script copiado! Péguelo en el SQL Editor de su proyecto Supabase y presione "Run".
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  import { getStoredSupabaseConfig, saveStoredSupabaseConfig, testSupabaseConnection } from '../lib/supabase';
+
+  const modal = document.getElementById('supabase-modal');
+  const btnOpen = document.getElementById('btn-open-supabase-modal');
+  const btnClose = document.getElementById('btn-close-supabase-modal');
+  const form = document.getElementById('supabase-config-form') as HTMLFormElement;
+  const inputUrl = document.getElementById('cfg-supabase-url') as HTMLInputElement;
+  const inputKey = document.getElementById('cfg-supabase-anon-key') as HTMLInputElement;
+  const btnTest = document.getElementById('btn-test-supabase-conn');
+  const feedback = document.getElementById('supabase-test-feedback');
+  const statusDot = document.getElementById('supabase-status-dot');
+  const statusText = document.getElementById('supabase-status-text');
+
+  function initModal() {
+    const { url, anonKey } = getStoredSupabaseConfig();
+    if (inputUrl && url) inputUrl.value = url;
+    if (inputKey && anonKey) inputKey.value = anonKey;
+    updateHeaderStatus(Boolean(url && anonKey));
+  }
+
+  function updateHeaderStatus(connected: boolean) {
+    if (statusDot) {
+      statusDot.className = connected
+        ? 'w-2.5 h-2.5 rounded-full bg-emerald-500'
+        : 'w-2.5 h-2.5 rounded-full bg-amber-500';
+    }
+    if (statusText) {
+      statusText.textContent = connected ? 'Supabase Conectado' : 'Supabase (Local)';
+    }
+  }
+
+  if (btnOpen && modal) {
+    btnOpen.addEventListener('click', () => {
+      initModal();
+      modal.classList.remove('hidden');
+    });
+  }
+
+  if (btnClose && modal) {
+    btnClose.addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+  }
+
+  if (btnTest) {
+    btnTest.addEventListener('click', async () => {
+      const url = inputUrl.value.trim();
+      const key = inputKey.value.trim();
+
+      if (!url || !key) {
+        showFeedback(false, 'Por favor ingrese tanto la URL como la Anon Key.');
+        return;
+      }
+
+      btnTest.textContent = 'Verificando...';
+      const result = await testSupabaseConnection(url, key);
+      btnTest.textContent = '🔍 Probar Conexión';
+      showFeedback(result.success, result.message);
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const url = inputUrl.value.trim();
+      const key = inputKey.value.trim();
+
+      saveStoredSupabaseConfig(url, key);
+      updateHeaderStatus(Boolean(url && key));
+      showFeedback(true, '¡Configuración guardada exitosamente!');
+      setTimeout(() => {
+        if (modal) modal.classList.add('hidden');
+        window.location.reload();
+      }, 1000);
+    });
+  }
+
+  function showFeedback(success: boolean, msg: string) {
+    if (!feedback) return;
+    feedback.textContent = msg;
+    feedback.classList.remove('hidden');
+    feedback.className = success
+      ? 'p-3 rounded-xl border text-xs bg-emerald-50 border-emerald-200 text-emerald-800 font-semibold'
+      : 'p-3 rounded-xl border text-xs bg-red-50 border-red-200 text-red-800 font-semibold';
+  }
+
+  const btnCopyFull = document.getElementById('btn-copy-full-sql');
+  const copyStatus = document.getElementById('sql-copy-status');
+
+  if (btnCopyFull) {
+    btnCopyFull.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/supabase.sql');
+        const text = await res.text();
+        await navigator.clipboard.writeText(text);
+        if (copyStatus) {
+          copyStatus.classList.remove('hidden');
+          setTimeout(() => copyStatus.classList.add('hidden'), 4000);
+        }
+      } catch (err) {
+        alert('Puede abrir y copiar el archivo supabase.sql que se encuentra en la raíz del proyecto.');
+      }
+    });
+  }
+
+  initModal();
+</script>

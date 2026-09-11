@@ -1,0 +1,942 @@
+---
+import { MAESTRIAS_USS, CAPACITACION_DEFAULT, QUESTION_SECTIONS, LIKERT_OPTIONS } from '../lib/constants';
+import { DEPARTAMENTOS_LIST } from '../lib/ubigeo';
+---
+
+<div class="w-full max-w-4xl mx-auto">
+  
+  <!-- Banner Informativo del Evento USS -->
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-blue-950/80 to-slate-900 border border-blue-500/20 p-6 sm:p-8 mb-8 shadow-2xl shadow-blue-950/50">
+    <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
+    <div class="relative z-10">
+      <div class="flex flex-wrap items-center gap-2 mb-3">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Encuesta Activa 2026
+        </span>
+        <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-white/5 text-slate-300 border border-white/10">
+          Dirección de Calidad y Acreditación USS
+        </span>
+      </div>
+      
+      <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight mb-2">
+        {CAPACITACION_DEFAULT.nombre}
+      </h2>
+      <p class="text-slate-300 text-sm leading-relaxed max-w-2xl">
+        Estimado(a) participante, deseamos conocer su opinión con respecto a la capacitación brindada.
+        Sus respuestas son fundamentales para el proceso de mejora continua del Sistema de Gestión de la Calidad (SGC USS).
+      </p>
+    </div>
+  </div>
+
+  <!-- Barra de Navegación por Pasos (Stepper) -->
+  <div class="glass-card rounded-2xl p-3 sm:p-4 mb-8 border border-white/10 shadow-xl overflow-x-auto">
+    <div class="flex items-center justify-between min-w-[620px] px-2 gap-2" id="stepper-nav">
+      
+      <!-- Paso 1 -->
+      <button type="button" class="step-nav-btn active flex items-center gap-3 p-2 rounded-xl transition-all" data-step="1">
+        <span class="step-num w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-blue-600 text-white shadow-md shadow-blue-600/40">1</span>
+        <div class="text-left">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-blue-400">Paso 1</p>
+          <p class="text-xs font-bold text-white whitespace-nowrap">Atributos Generales</p>
+        </div>
+      </button>
+
+      <div class="flex-1 h-0.5 bg-slate-800 mx-1"></div>
+
+      <!-- Paso 2 -->
+      <button type="button" class="step-nav-btn flex items-center gap-3 p-2 rounded-xl text-slate-400 hover:text-slate-200 transition-all" data-step="2">
+        <span class="step-num w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-slate-800 text-slate-400">2</span>
+        <div class="text-left">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Paso 2</p>
+          <p class="text-xs font-bold text-slate-300 whitespace-nowrap">Organización</p>
+        </div>
+      </button>
+
+      <div class="flex-1 h-0.5 bg-slate-800 mx-1"></div>
+
+      <!-- Paso 3 -->
+      <button type="button" class="step-nav-btn flex items-center gap-3 p-2 rounded-xl text-slate-400 hover:text-slate-200 transition-all" data-step="3">
+        <span class="step-num w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-slate-800 text-slate-400">3</span>
+        <div class="text-left">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Paso 3</p>
+          <p class="text-xs font-bold text-slate-300 whitespace-nowrap">El Capacitador</p>
+        </div>
+      </button>
+
+      <div class="flex-1 h-0.5 bg-slate-800 mx-1"></div>
+
+      <!-- Paso 4 -->
+      <button type="button" class="step-nav-btn flex items-center gap-3 p-2 rounded-xl text-slate-400 hover:text-slate-200 transition-all" data-step="4">
+        <span class="step-num w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-slate-800 text-slate-400">4</span>
+        <div class="text-left">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Paso 4</p>
+          <p class="text-xs font-bold text-slate-300 whitespace-nowrap">Documentación</p>
+        </div>
+      </button>
+
+      <div class="flex-1 h-0.5 bg-slate-800 mx-1"></div>
+
+      <!-- Paso 5 -->
+      <button type="button" class="step-nav-btn flex items-center gap-3 p-2 rounded-xl text-slate-400 hover:text-slate-200 transition-all" data-step="5">
+        <span class="step-num w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-slate-800 text-slate-400">5</span>
+        <div class="text-left">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Paso 5</p>
+          <p class="text-xs font-bold text-slate-300 whitespace-nowrap">Satisfacción</p>
+        </div>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Formulario Principal -->
+  <form id="uss-capacitacion-form" class="relative">
+    
+    <!-- ========================================================================= -->
+    <!-- HOJA 1: ATRIBUTOS GENERALES DEL PARTICIPANTE -->
+    <!-- ========================================================================= -->
+    <div class="form-step-card glass-card rounded-2xl p-6 sm:p-8 border border-white/10 shadow-2xl space-y-6" data-step-content="1">
+      
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Hoja 1 de 5</span>
+          <h3 class="text-xl font-black text-white">Datos Generales del Participante</h3>
+          <p class="text-xs text-slate-400 mt-1">Por favor complete sus datos personales e información institucional.</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/30 text-lg">
+          👤
+        </div>
+      </div>
+
+      <!-- Grid de campos: Correo y Género -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="md:col-span-2">
+          <label for="correo" class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+            Correo Electrónico (USS / Institucional) <span class="text-red-400">*</span>
+          </label>
+          <div class="relative">
+            <input
+              type="email"
+              id="correo"
+              name="correo"
+              required
+              placeholder="ejemplo@crece.uss.edu.pe"
+              class="custom-input pl-10"
+            />
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">✉️</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+            Sexo / Género <span class="text-red-400">*</span>
+          </label>
+          <div class="flex gap-2">
+            <label class="flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-white/10 bg-slate-900/60 cursor-pointer hover:border-blue-500/40 text-xs font-semibold text-slate-300 has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-500 transition-all">
+              <input type="radio" name="sexo" value="MASCULINO" required class="hidden" />
+              <span>Hombre</span>
+            </label>
+            <label class="flex-1 flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-white/10 bg-slate-900/60 cursor-pointer hover:border-blue-500/40 text-xs font-semibold text-slate-300 has-[:checked]:bg-blue-600 has-[:checked]:text-white has-[:checked]:border-blue-500 transition-all">
+              <input type="radio" name="sexo" value="FEMENINO" class="hidden" />
+              <span>Mujer</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid: Nombres y Apellidos -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div>
+          <label for="nombres" class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+            Nombres <span class="text-red-400">*</span>
+          </label>
+          <input
+            type="text"
+            id="nombres"
+            name="nombres"
+            required
+            placeholder="Juan Carlos"
+            class="custom-input"
+          />
+        </div>
+
+        <div>
+          <label for="apellidos" class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+            Apellidos <span class="text-red-400">*</span>
+          </label>
+          <input
+            type="text"
+            id="apellidos"
+            name="apellidos"
+            required
+            placeholder="Pérez Salazar"
+            class="custom-input"
+          />
+        </div>
+      </div>
+
+      <!-- Grid: Celular, Edad y Puesto de Trabajo -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div>
+          <label for="celular" class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+            Celular / WhatsApp <span class="text-red-400">*</span>
+          </label>
+          <input
+            type="tel"
+            id="celular"
+            name="celular"
+            required
+            placeholder="987 654 321"
+            maxlength="12"
+            class="custom-input"
+          />
+        </div>
+
+        <div>
+          <label for="edad" class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+            Edad <span class="text-red-400">*</span>
+          </label>
+          <input
+            type="number"
+            id="edad"
+            name="edad"
+            required
+            min="17"
+            max="95"
+            placeholder="32"
+            class="custom-input"
+          />
+        </div>
+
+        <div>
+          <label for="puestoTrabajo" class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+            Puesto de Trabajo <span class="text-red-400">*</span>
+          </label>
+          <input
+            type="text"
+            id="puestoTrabajo"
+            name="puestoTrabajo"
+            required
+            placeholder="Docente / Administrativo / etc."
+            class="custom-input"
+          />
+        </div>
+      </div>
+
+      <!-- Programa o Maestría USS -->
+      <div>
+        <label for="maestria" class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+          Maestría / Programa de Posgrado <span class="text-red-400">*</span>
+        </label>
+        <select id="maestria" name="maestria" required class="custom-input">
+          <option value="">-- Seleccione su programa o relación institucional --</option>
+          {MAESTRIAS_USS.map((prog) => (
+            <option value={prog}>{prog}</option>
+          ))}
+        </select>
+      </div>
+
+      <!-- Ubicación Geográfica: Dpto, Prov, Distrito (INEI Ubigeos Oficiales) -->
+      <div class="pt-2 border-t border-white/10">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-amber-400 text-sm">📍</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-amber-400">
+            Ubicación Geográfica (Ubigeo Perú INEI)
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label for="departamento" class="block text-xs font-medium text-slate-400 mb-1.5">
+              Departamento <span class="text-red-400">*</span>
+            </label>
+            <select id="departamento" name="departamento" required class="custom-input">
+              <option value="">Seleccionar Departamento</option>
+              {DEPARTAMENTOS_LIST.map((d) => (
+                <option value={d.name}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label for="provincia" class="block text-xs font-medium text-slate-400 mb-1.5">
+              Provincia <span class="text-red-400">*</span>
+            </label>
+            <select id="provincia" name="provincia" required disabled class="custom-input">
+              <option value="">Primero elija departamento</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="distrito" class="block text-xs font-medium text-slate-400 mb-1.5">
+              Distrito <span class="text-red-400">*</span>
+            </label>
+            <select id="distrito" name="distrito" required disabled class="custom-input">
+              <option value="">Primero elija provincia</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos de la Capacitación (Lectura y edición opcional) -->
+      <div class="pt-2 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <div>
+          <label for="nombreCapacitacion" class="block font-medium text-slate-400 mb-1">
+            Nombre de la Capacitación
+          </label>
+          <input
+            type="text"
+            id="nombreCapacitacion"
+            name="nombreCapacitacion"
+            value={CAPACITACION_DEFAULT.nombre}
+            class="custom-input text-xs"
+          />
+        </div>
+        <div>
+          <label for="expositor" class="block font-medium text-slate-400 mb-1">
+            Expositor(a)
+          </label>
+          <input
+            type="text"
+            id="expositor"
+            name="expositor"
+            value={CAPACITACION_DEFAULT.expositor}
+            class="custom-input text-xs"
+          />
+        </div>
+      </div>
+
+      <!-- Navegación -->
+      <div class="flex justify-end pt-4 border-t border-white/10">
+        <button
+          type="button"
+          class="btn-next-step flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition-all"
+          data-next="2"
+        >
+          <span>Continuar a Preguntas de Organización</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- HOJA 2: ORGANIZACIÓN -->
+    <!-- ========================================================================= -->
+    <div class="form-step-card glass-card rounded-2xl p-6 sm:p-8 border border-white/10 shadow-2xl space-y-6 hidden" data-step-content="2">
+      
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Hoja 2 de 5</span>
+          <h3 class="text-xl font-black text-white">1. ORGANIZACIÓN DE LA CAPACITACIÓN</h3>
+          <p class="text-xs text-slate-400 mt-1">Evalúe el horario, instalaciones y medios audiovisuales.</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/30 text-lg">
+          🏢
+        </div>
+      </div>
+
+      <!-- Preguntas de Organización -->
+      <div class="space-y-6">
+        {QUESTION_SECTIONS[0].questions.map((q, idx) => (
+          <div class="p-4 rounded-xl bg-slate-900/70 border border-white/5 space-y-3">
+            <div class="flex items-start gap-2.5">
+              <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center text-xs font-bold">
+                1.{idx + 1}
+              </span>
+              <p class="text-sm font-semibold text-slate-100">{q.label}</p>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+              {LIKERT_OPTIONS.map((opt) => (
+                <label class="relative flex flex-col items-center justify-center p-2.5 rounded-xl border border-white/10 bg-slate-950/80 cursor-pointer hover:border-blue-500/50 text-center transition-all group has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-950/30">
+                  <input
+                    type="radio"
+                    name={q.name}
+                    value={opt.label}
+                    required
+                    class="sr-only"
+                  />
+                  <span class="text-lg mb-1 group-hover:scale-110 transition-transform">{opt.icon}</span>
+                  <span class="text-[11px] font-bold text-slate-300 tracking-tight leading-tight">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Navegación -->
+      <div class="flex items-center justify-between pt-4 border-t border-white/10">
+        <button
+          type="button"
+          class="btn-prev-step flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 font-bold text-sm transition-all"
+          data-prev="1"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>Atrás</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn-next-step flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition-all"
+          data-next="3"
+        >
+          <span>Paso Siguiente: El Capacitador</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- HOJA 3: EL CAPACITADOR -->
+    <!-- ========================================================================= -->
+    <div class="form-step-card glass-card rounded-2xl p-6 sm:p-8 border border-white/10 shadow-2xl space-y-6 hidden" data-step-content="3">
+      
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Hoja 3 de 5</span>
+          <h3 class="text-xl font-black text-white">2. DESARROLLO DEL EVENTO: EL CAPACITADOR</h3>
+          <p class="text-xs text-slate-400 mt-1">Califique el dominio, metodología y tiempo del expositor.</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30 text-lg">
+          👨‍🏫
+        </div>
+      </div>
+
+      <!-- Preguntas del Capacitador -->
+      <div class="space-y-6">
+        {QUESTION_SECTIONS[1].questions.map((q, idx) => (
+          <div class="p-4 rounded-xl bg-slate-900/70 border border-white/5 space-y-3">
+            <div class="flex items-start gap-2.5">
+              <span class="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-xs font-bold">
+                2.{idx + 1}
+              </span>
+              <p class="text-sm font-semibold text-slate-100">{q.label}</p>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+              {LIKERT_OPTIONS.map((opt) => (
+                <label class="relative flex flex-col items-center justify-center p-2.5 rounded-xl border border-white/10 bg-slate-950/80 cursor-pointer hover:border-indigo-500/50 text-center transition-all group has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-950/30">
+                  <input
+                    type="radio"
+                    name={q.name}
+                    value={opt.label}
+                    required
+                    class="sr-only"
+                  />
+                  <span class="text-lg mb-1 group-hover:scale-110 transition-transform">{opt.icon}</span>
+                  <span class="text-[11px] font-bold text-slate-300 tracking-tight leading-tight">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Navegación -->
+      <div class="flex items-center justify-between pt-4 border-t border-white/10">
+        <button
+          type="button"
+          class="btn-prev-step flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 font-bold text-sm transition-all"
+          data-prev="2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>Atrás</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn-next-step flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition-all"
+          data-next="4"
+        >
+          <span>Paso Siguiente: Documentación</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- HOJA 4: DOCUMENTACIÓN DE LA CAPACITACIÓN -->
+    <!-- ========================================================================= -->
+    <div class="form-step-card glass-card rounded-2xl p-6 sm:p-8 border border-white/10 shadow-2xl space-y-6 hidden" data-step-content="4">
+      
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-blue-400">Hoja 4 de 5</span>
+          <h3 class="text-xl font-black text-white">3. DOCUMENTACIÓN DE LA CAPACITACIÓN</h3>
+          <p class="text-xs text-slate-400 mt-1">Evalúe la calidad y contenido de los recursos y diapositivas.</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-amber-600/20 text-amber-400 flex items-center justify-center border border-amber-500/30 text-lg">
+          📑
+        </div>
+      </div>
+
+      <!-- Preguntas de Documentación -->
+      <div class="space-y-6">
+        {QUESTION_SECTIONS[2].questions.map((q, idx) => (
+          <div class="p-4 rounded-xl bg-slate-900/70 border border-white/5 space-y-3">
+            <div class="flex items-start gap-2.5">
+              <span class="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center text-xs font-bold">
+                3.{idx + 1}
+              </span>
+              <p class="text-sm font-semibold text-slate-100">{q.label}</p>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+              {LIKERT_OPTIONS.map((opt) => (
+                <label class="relative flex flex-col items-center justify-center p-2.5 rounded-xl border border-white/10 bg-slate-950/80 cursor-pointer hover:border-amber-500/50 text-center transition-all group has-[:checked]:border-amber-500 has-[:checked]:bg-amber-950/30">
+                  <input
+                    type="radio"
+                    name={q.name}
+                    value={opt.label}
+                    required
+                    class="sr-only"
+                  />
+                  <span class="text-lg mb-1 group-hover:scale-110 transition-transform">{opt.icon}</span>
+                  <span class="text-[11px] font-bold text-slate-300 tracking-tight leading-tight">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <!-- Navegación -->
+      <div class="flex items-center justify-between pt-4 border-t border-white/10">
+        <button
+          type="button"
+          class="btn-prev-step flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 font-bold text-sm transition-all"
+          data-prev="3"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>Atrás</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn-next-step flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition-all"
+          data-next="5"
+        >
+          <span>Paso Final: Satisfacción y Envío</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================================= -->
+    <!-- HOJA 5: SATISFACCIÓN GENERAL Y SUGERENCIAS -->
+    <!-- ========================================================================= -->
+    <div class="form-step-card glass-card rounded-2xl p-6 sm:p-8 border border-white/10 shadow-2xl space-y-6 hidden" data-step-content="5">
+      
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Hoja 5 de 5 (Final)</span>
+          <h3 class="text-xl font-black text-white">4. SATISFACCIÓN GENERAL Y SUGERENCIAS</h3>
+          <p class="text-xs text-slate-400 mt-1">Calificación global del evento y comentarios finales.</p>
+        </div>
+        <div class="w-10 h-10 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 text-lg">
+          🌟
+        </div>
+      </div>
+
+      <!-- Pregunta de Satisfacción General -->
+      <div class="p-5 rounded-2xl bg-gradient-to-br from-blue-950/40 via-slate-900 to-slate-950 border border-blue-500/20 space-y-4">
+        <label class="block text-sm sm:text-base font-bold text-white">
+          Evaluación General de la Capacitación <span class="text-red-400">*</span>
+        </label>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {LIKERT_OPTIONS.map((opt) => (
+            <label class="relative flex flex-col items-center justify-center p-3.5 rounded-xl border border-white/10 bg-slate-950/80 cursor-pointer hover:border-emerald-500/60 text-center transition-all group has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-500/15 has-[:checked]:shadow-lg has-[:checked]:shadow-emerald-500/20">
+              <input
+                type="radio"
+                name="satisfaccion_general"
+                value={opt.label}
+                required
+                class="sr-only"
+              />
+              <span class="text-2xl mb-1.5 group-hover:scale-125 transition-transform">{opt.icon}</span>
+              <span class="text-xs font-extrabold text-white tracking-tight">{opt.label}</span>
+              <span class="text-[10px] text-slate-400 mt-0.5">{opt.score} puntos</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <!-- Observación y/o Sugerencias -->
+      <div>
+        <label for="observaciones_sugerencias" class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+          Observaciones y/o Sugerencias
+        </label>
+        <textarea
+          id="observaciones_sugerencias"
+          name="observaciones_sugerencias"
+          rows="4"
+          placeholder="Escriba aquí sus comentarios, sugerencias o temas de interés para futuras capacitaciones..."
+          class="custom-input resize-none"
+        ></textarea>
+      </div>
+
+      <!-- Resumen de envío -->
+      <div class="p-4 rounded-xl bg-blue-950/30 border border-blue-500/20 flex items-start gap-3 text-xs text-slate-300">
+        <span class="text-blue-400 text-lg">💡</span>
+        <p class="leading-relaxed">
+          Al presionar <strong>"Enviar y Registrar en BD"</strong>, sus respuestas se guardarán de forma segura en la base de datos Supabase y estarán disponibles inmediatamente para exportación en la pestaña <strong>Modo Excel</strong>.
+        </p>
+      </div>
+
+      <!-- Navegación y Botón Submit -->
+      <div class="flex items-center justify-between pt-4 border-t border-white/10">
+        <button
+          type="button"
+          class="btn-prev-step flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 font-bold text-sm transition-all"
+          data-prev="4"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>Atrás</span>
+        </button>
+
+        <button
+          type="submit"
+          id="btn-submit-form"
+          class="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm sm:text-base shadow-xl shadow-emerald-600/30 hover:shadow-emerald-600/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+        >
+          <span>🚀 Enviar y Guardar en BD</span>
+        </button>
+      </div>
+
+    </div>
+
+  </form>
+
+  <!-- ========================================================================= -->
+  <!-- CARD DE ÉXITO TRAS EL ENVÍO -->
+  <!-- ========================================================================= -->
+  <div id="form-success-card" class="glass-card rounded-2xl p-8 sm:p-12 border border-emerald-500/30 shadow-2xl text-center space-y-6 hidden">
+    <div class="w-20 h-20 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-4xl border border-emerald-500/30 shadow-lg shadow-emerald-500/20 animate-bounce">
+      ✅
+    </div>
+
+    <div class="space-y-2">
+      <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        Respuesta Guardada
+      </span>
+      <h3 class="text-2xl sm:text-3xl font-black text-white">
+        ¡Muchas gracias por su participación!
+      </h3>
+      <p class="text-sm text-slate-300 max-w-lg mx-auto">
+        Su encuesta de satisfacción ha sido registrada exitosamente en el sistema de la <strong>Universidad Señor de Sipán</strong>.
+      </p>
+    </div>
+
+    <div class="p-4 rounded-xl bg-slate-900/80 border border-white/10 max-w-md mx-auto text-xs text-slate-300 space-y-1">
+      <div class="flex justify-between">
+        <span class="text-slate-400">Estado de guardado:</span>
+        <span id="success-sync-status" class="font-bold text-emerald-400">Sincronizado con Supabase</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-400">Fecha y hora:</span>
+        <span id="success-timestamp" class="font-mono text-slate-200"></span>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center justify-center gap-4 pt-2">
+      <button
+        type="button"
+        id="btn-goto-excel-after-submit"
+        class="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition-all"
+      >
+        <span>📊 Ver en Cuadrícula Excel</span>
+      </button>
+
+      <button
+        type="button"
+        id="btn-reset-form-new"
+        class="flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-300 font-bold text-sm transition-all"
+      >
+        <span>📝 Llenar otra respuesta</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Client script for Form interactions, Peru Ubigeo cascading selects and Stepper -->
+<script>
+  import { getProvinciasByDepto, getDistritosByProvincia } from '../lib/ubigeo';
+  import { submitCapacitacionResponse } from '../lib/supabase';
+  import confetti from 'canvas-confetti';
+
+  let currentStep = 1;
+  const totalSteps = 5;
+
+  // DOM Elements
+  const form = document.getElementById('uss-capacitacion-form') as HTMLFormElement;
+  const successCard = document.getElementById('form-success-card');
+  const stepCards = document.querySelectorAll<HTMLElement>('[data-step-content]');
+  const stepNavBtns = document.querySelectorAll<HTMLButtonElement>('.step-nav-btn');
+
+  // Selectores de Ubigeo
+  const selDepto = document.getElementById('departamento') as HTMLSelectElement;
+  const selProv = document.getElementById('provincia') as HTMLSelectElement;
+  const selDist = document.getElementById('distrito') as HTMLSelectElement;
+
+  // Manejo de Cascada de Ubigeo
+  if (selDepto && selProv && selDist) {
+    selDepto.addEventListener('change', () => {
+      const depto = selDepto.value;
+      selProv.innerHTML = '<option value="">Seleccionar Provincia</option>';
+      selDist.innerHTML = '<option value="">Primero elija provincia</option>';
+      selDist.disabled = true;
+
+      if (!depto) {
+        selProv.disabled = true;
+        return;
+      }
+
+      const provs = getProvinciasByDepto(depto);
+      provs.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        selProv.appendChild(opt);
+      });
+      selProv.disabled = false;
+    });
+
+    selProv.addEventListener('change', () => {
+      const depto = selDepto.value;
+      const prov = selProv.value;
+      selDist.innerHTML = '<option value="">Seleccionar Distrito</option>';
+
+      if (!prov) {
+        selDist.disabled = true;
+        return;
+      }
+
+      const dists = getDistritosByProvincia(depto, prov);
+      dists.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.name;
+        opt.textContent = d.name;
+        selDist.appendChild(opt);
+      });
+      selDist.disabled = false;
+    });
+  }
+
+  // Stepper navigation logic
+  function goToStep(step: number) {
+    if (step < 1 || step > totalSteps) return;
+
+    // Si avanza de paso, validar los campos del paso actual
+    if (step > currentStep) {
+      const currentCard = document.querySelector(`[data-step-content="${currentStep}"]`);
+      if (currentCard) {
+        const requiredInputs = currentCard.querySelectorAll<HTMLInputElement | HTMLSelectElement>('input[required], select[required]');
+        for (const input of Array.from(requiredInputs)) {
+          if (input.type === 'radio') {
+            const group = currentCard.querySelectorAll<HTMLInputElement>(`input[name="${input.name}"]`);
+            const checked = Array.from(group).some(r => r.checked);
+            if (!checked) {
+              input.focus();
+              alert(`Por favor responda todas las preguntas requeridas antes de continuar.`);
+              return;
+            }
+          } else if (!input.checkValidity()) {
+            input.reportValidity();
+            return;
+          }
+        }
+      }
+    }
+
+    currentStep = step;
+
+    // Actualizar visibilidad de tarjetas
+    stepCards.forEach(card => {
+      const cardStep = parseInt(card.getAttribute('data-step-content') || '1');
+      if (cardStep === currentStep) {
+        card.classList.remove('hidden');
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+
+    // Actualizar botones de stepper
+    stepNavBtns.forEach(btn => {
+      const btnStep = parseInt(btn.getAttribute('data-step') || '1');
+      const numSpan = btn.querySelector('.step-num') as HTMLElement;
+      
+      if (btnStep === currentStep) {
+        btn.classList.add('active');
+        numSpan.className = 'step-num w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-blue-600 text-white shadow-md shadow-blue-600/40';
+      } else if (btnStep < currentStep) {
+        btn.classList.remove('active');
+        numSpan.className = 'step-num w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-emerald-600/30 text-emerald-300 border border-emerald-500/40';
+        numSpan.textContent = '✓';
+      } else {
+        btn.classList.remove('active');
+        numSpan.className = 'step-num w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-slate-800 text-slate-400';
+        numSpan.textContent = String(btnStep);
+      }
+    });
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Next / Prev buttons
+  document.querySelectorAll<HTMLButtonElement>('.btn-next-step').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const next = parseInt(btn.getAttribute('data-next') || '1');
+      goToStep(next);
+    });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.btn-prev-step').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prev = parseInt(btn.getAttribute('data-prev') || '1');
+      goToStep(prev);
+    });
+  });
+
+  stepNavBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = parseInt(btn.getAttribute('data-step') || '1');
+      // Solo permitir saltar si es paso anterior o el siguiente
+      if (target <= currentStep || target === currentStep + 1) {
+        goToStep(target);
+      }
+    });
+  });
+
+  // Envío del formulario
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('btn-submit-form') as HTMLButtonElement;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>⏳ Guardando respuesta...</span>';
+      }
+
+      const formData = new FormData(form);
+
+      const payload: any = {
+        apellidosNombres: `${formData.get('apellidos') || ''}, ${formData.get('nombres') || ''}`.trim(),
+        correo: formData.get('correo') as string,
+        puestoTrabajo: formData.get('puestoTrabajo') as string,
+        expositor: formData.get('expositor') as string,
+        nombreCapacitacion: formData.get('nombreCapacitacion') as string,
+        sexo: formData.get('sexo') as string,
+        edad: formData.get('edad') as string,
+        celular: formData.get('celular') as string,
+        maestria: formData.get('maestria') as string,
+        departamento: formData.get('departamento') as string,
+        provincia: formData.get('provincia') as string,
+        distrito: formData.get('distrito') as string,
+        
+        organizacion_horario: formData.get('organizacion_horario') as string,
+        organizacion_instalaciones: formData.get('organizacion_instalaciones') as string,
+        organizacion_audiovisuales: formData.get('organizacion_audiovisuales') as string,
+
+        capacitador_tema: formData.get('capacitador_tema') as string,
+        capacitador_dominio: formData.get('capacitador_dominio') as string,
+        capacitador_metodologia: formData.get('capacitador_metodologia') as string,
+        capacitador_tiempo: formData.get('capacitador_tiempo') as string,
+
+        documentacion_calidad: formData.get('documentacion_calidad') as string,
+        documentacion_contenido: formData.get('documentacion_contenido') as string,
+
+        satisfaccion_general: formData.get('satisfaccion_general') as string,
+        observaciones_sugerencias: formData.get('observaciones_sugerencias') as string
+      };
+
+      try {
+        const res = await submitCapacitacionResponse(payload);
+
+        // Disparar confetti
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+
+        // Mostrar pantalla de éxito
+        form.classList.add('hidden');
+        if (successCard) {
+          successCard.classList.remove('hidden');
+          const syncStatusEl = document.getElementById('success-sync-status');
+          const timeEl = document.getElementById('success-timestamp');
+          if (syncStatusEl) {
+            syncStatusEl.textContent = res.synced ? 'Sincronizado con Supabase' : 'Guardado Local (Pendiente Supabase)';
+            syncStatusEl.className = res.synced ? 'font-bold text-emerald-400' : 'font-bold text-amber-400';
+          }
+          if (timeEl) {
+            timeEl.textContent = new Date().toLocaleString('es-PE');
+          }
+        }
+
+        // Actualizar contador del badge
+        window.dispatchEvent(new CustomEvent('uss:response_saved'));
+
+      } catch (err: any) {
+        alert('Ocurrió un error al guardar: ' + (err.message || err));
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>🚀 Enviar y Guardar en BD</span>';
+        }
+      }
+    });
+  }
+
+  // Botón para resetear formulario y llenar otra
+  const btnReset = document.getElementById('btn-reset-form-new');
+  if (btnReset && form && successCard) {
+    btnReset.addEventListener('click', () => {
+      form.reset();
+      selProv.innerHTML = '<option value="">Primero elija departamento</option>';
+      selProv.disabled = true;
+      selDist.innerHTML = '<option value="">Primero elija provincia</option>';
+      selDist.disabled = true;
+      successCard.classList.add('hidden');
+      form.classList.remove('hidden');
+      goToStep(1);
+    });
+  }
+
+  // Botón para ir a modo Excel
+  const btnGotoExcel = document.getElementById('btn-goto-excel-after-submit');
+  if (btnGotoExcel) {
+    btnGotoExcel.addEventListener('click', () => {
+      const tabBtn = document.getElementById('tab-btn-excel');
+      if (tabBtn) tabBtn.click();
+    });
+  }
+</script>
