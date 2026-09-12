@@ -22,6 +22,7 @@ export function getSupabaseClient(): SupabaseClient | null {
 // Map frontend camelCase to snake_case for Supabase
 function recordToDatabaseRow(record: CapacitacionResponseRecord) {
   return {
+    capacitacion_id: record.capacitacionId ? Number(record.capacitacionId) : null,
     apellidos_nombres: record.apellidosNombres,
     correo: record.correo,
     puesto_trabajo: record.puestoTrabajo || null,
@@ -53,6 +54,7 @@ function databaseRowToRecord(row: any): CapacitacionResponseRecord {
     id: row.id,
     created_at: row.created_at,
     sync_status: 'synced',
+    capacitacionId: row.capacitacion_id ? Number(row.capacitacion_id) : undefined,
     apellidosNombres: row.apellidos_nombres || '',
     correo: row.correo || '',
     puestoTrabajo: row.puesto_trabajo || '',
@@ -83,6 +85,90 @@ function databaseRowToRecord(row: any): CapacitacionResponseRecord {
   };
 }
 
+export async function getEventoActivo(): Promise<{ id: number; nombre: string; expositor: string; fecha_evento?: string } | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('capacitaciones_eventos')
+      .select('*')
+      .eq('activo', true)
+      .order('id', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && data) {
+      return {
+        id: Number(data.id),
+        nombre: data.nombre,
+        expositor: data.expositor,
+        fecha_evento: data.fecha_evento
+      };
+    }
+  } catch (e) {
+    console.warn('No se pudo obtener evento desde capacitaciones_eventos, usando default:', e);
+  }
+
+  return null;
+}
+
+export async function verificarRegistroPrevio(correo: string, capacitacionId?: number, nombreCapacitacion?: string): Promise<{
+  yaRegistradoEnEsteEvento: boolean;
+  registroEsteEvento?: CapacitacionResponseRecord;
+  registroHistoricoUsuario?: CapacitacionResponseRecord;
+}> {
+  const supabase = getSupabaseClient();
+  if (!supabase || !correo || !correo.includes('@')) {
+    return { yaRegistradoEnEsteEvento: false };
+  }
+
+  const cleanEmail = correo.trim().toLowerCase();
+
+  try {
+    // 1. Buscar si ya respondió ESTE evento en específico
+    let queryEsteEvento = supabase
+      .from('respuestas_capacitacion')
+      .select('*')
+      .ilike('correo', cleanEmail);
+
+    if (capacitacionId) {
+      queryEsteEvento = queryEsteEvento.eq('capacitacion_id', capacitacionId);
+    } else if (nombreCapacitacion) {
+      queryEsteEvento = queryEsteEvento.eq('nombre_capacitacion', nombreCapacitacion);
+    }
+
+    const { data: dataEsteEvento, error: errEste } = await queryEsteEvento.limit(1);
+
+    if (!errEste && dataEsteEvento && dataEsteEvento.length > 0) {
+      return {
+        yaRegistradoEnEsteEvento: true,
+        registroEsteEvento: databaseRowToRecord(dataEsteEvento[0])
+      };
+    }
+
+    // 2. Si no ha respondido este evento, buscar si ya existe en un evento anterior para autocompletar su perfil
+    const { data: dataHistorico } = await supabase
+      .from('respuestas_capacitacion')
+      .select('*')
+      .ilike('correo', cleanEmail)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (dataHistorico && dataHistorico.length > 0) {
+      return {
+        yaRegistradoEnEsteEvento: false,
+        registroHistoricoUsuario: databaseRowToRecord(dataHistorico[0])
+      };
+    }
+
+  } catch (e) {
+    console.error('Error al verificar registro previo:', e);
+  }
+
+  return { yaRegistradoEnEsteEvento: false };
+}
+
 export async function submitCapacitacionResponse(record: CapacitacionResponseRecord): Promise<{ success: boolean; synced: boolean; error?: string }> {
   const supabase = getSupabaseClient();
   if (!supabase) {
@@ -99,6 +185,14 @@ export async function submitCapacitacionResponse(record: CapacitacionResponseRec
 
     if (error) {
       console.error('Fallo al guardar en Supabase:', error.message);
+      // Código de PostgreSQL 23505 = unique_violation
+      if (error.code === '23505' || error.message.includes('unique') || error.message.includes('duplicate')) {
+        return {
+          success: false,
+          synced: false,
+          error: 'Usted ya cuenta con una respuesta registrada para este evento. No se admiten registros duplicados.'
+        };
+      }
       return { success: false, synced: false, error: error.message };
     }
 

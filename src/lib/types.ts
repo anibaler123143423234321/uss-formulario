@@ -1,6 +1,16 @@
 export type LikertRating = 'MUY BUENO' | 'BUENO' | 'REGULAR' | 'DEFICIENTE' | 'MUY DEFICIENTE';
 
+export interface CapacitacionEvento {
+  id: number;
+  nombre: string;
+  expositor: string;
+  descripcion?: string;
+  fecha_evento?: string;
+  activo: boolean;
+}
+
 export interface FormParticipantAttributes {
+  capacitacionId?: number;
   apellidosNombres: string;
   correo: string;
   puestoTrabajo?: string;

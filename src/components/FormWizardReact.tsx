@@ -17,12 +17,14 @@ import {
   Send,
   CheckCircle2,
   RotateCcw,
-  Info
+  Info,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 
 import { MAESTRIAS_USS, CAPACITACION_DEFAULT, LIKERT_OPTIONS } from '../lib/constants';
 import { getDepartamentos, getProvincias, getDistritos, type UbigeoItem } from '../lib/ubigeo';
-import { submitCapacitacionResponse } from '../lib/supabase';
+import { submitCapacitacionResponse, getEventoActivo, verificarRegistroPrevio } from '../lib/supabase';
 import type { CapacitacionResponseRecord } from '../lib/types';
 
 interface FormDataState {
@@ -109,6 +111,12 @@ export default function FormWizardReact() {
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [submittedTime, setSubmittedTime] = useState<string>('');
 
+  // Evento Activo desde Supabase
+  const [eventoActivo, setEventoActivo] = useState<{ id: number; nombre: string; expositor: string } | null>(null);
+  const [checkingEmail, setCheckingEmail] = useState<boolean>(false);
+  const [yaRegistradoEnEsteEvento, setYaRegistradoEnEsteEvento] = useState<boolean>(false);
+  const [fechaRegistroPrevio, setFechaRegistroPrevio] = useState<string>('');
+
   // Estados de Ubigeo
   const [departamentos, setDepartamentos] = useState<UbigeoItem[]>([]);
   const [provincias, setProvincias] = useState<UbigeoItem[]>([]);
@@ -117,16 +125,115 @@ export default function FormWizardReact() {
   const [loadingDists, setLoadingDists] = useState<boolean>(false);
 
   useEffect(() => {
-    async function loadDeptos() {
+    async function loadInitial() {
       try {
-        const list = await getDepartamentos();
-        setDepartamentos(list);
+        const [deptos, evento] = await Promise.all([
+          getDepartamentos(),
+          getEventoActivo()
+        ]);
+        setDepartamentos(deptos);
+        if (evento) {
+          setEventoActivo(evento);
+        }
       } catch (err) {
-        console.error('Error cargando departamentos:', err);
+        console.error('Error cargando datos iniciales:', err);
       }
     }
-    loadDeptos();
+    loadInitial();
   }, []);
+
+  // Validación y autocompletado inteligente al salir del campo correo
+  const handleEmailBlur = async () => {
+    const email = formData.correo.trim().toLowerCase();
+    if (!email || !email.includes('@') || !email.includes('.')) return;
+
+    setCheckingEmail(true);
+    try {
+      const res = await verificarRegistroPrevio(
+        email,
+        eventoActivo?.id,
+        eventoActivo?.nombre || CAPACITACION_DEFAULT.nombre
+      );
+
+      // CASO 1: YA REGISTRADO EN ESTE EVENTO
+      if (res.yaRegistradoEnEsteEvento && res.registroEsteEvento) {
+        const reg = res.registroEsteEvento;
+        setYaRegistradoEnEsteEvento(true);
+        const partes = (reg.apellidosNombres || '').split(',');
+        const ap = partes[0]?.trim() || '';
+        const nom = partes[1]?.trim() || '';
+
+        setFormData((prev) => ({
+          ...prev,
+          apellidos: ap,
+          nombres: nom,
+          sexo: reg.esMasculino ? 'MASCULINO' : 'FEMENINO',
+          celular: reg.celular || '',
+          edad: String(reg.edad || ''),
+          puestoTrabajo: reg.puestoTrabajo || '',
+          maestria: reg.maestria || '',
+          departamento: reg.departamento || '',
+          departamentoId: reg.departamentoId || null,
+          provincia: reg.provincia || '',
+          provinciaId: reg.provinciaId || null,
+          distrito: reg.distrito || '',
+          distritoId: reg.distritoId || null,
+          organizacion_horario: reg.organizacion_horario,
+          organizacion_instalaciones: reg.organizacion_instalaciones,
+          organizacion_audiovisuales: reg.organizacion_audiovisuales,
+          capacitador_tema: reg.capacitador_tema,
+          capacitador_dominio: reg.capacitador_dominio,
+          capacitador_metodologia: reg.capacitador_metodologia,
+          capacitador_tiempo: reg.capacitador_tiempo,
+          documentacion_calidad: reg.documentacion_calidad,
+          documentacion_contenido: reg.documentacion_contenido,
+          satisfaccion_general: reg.satisfaccion_general,
+          observaciones_sugerencias: reg.observaciones_sugerencias || ''
+        }));
+
+        const fecha = reg.created_at ? new Date(reg.created_at).toLocaleString('es-PE') : '';
+        setFechaRegistroPrevio(fecha);
+        toast.error('Usted ya completó su evaluación para este evento' + (fecha ? ` el ${fecha}` : '') + '.', {
+          duration: 5000
+        });
+
+      // CASO 2: NUEVO EVENTO, PERO USUARIO CONOCIDO (Autocompletar datos para ahorrarle tiempo)
+      } else if (res.registroHistoricoUsuario) {
+        const hist = res.registroHistoricoUsuario;
+        const partes = (hist.apellidosNombres || '').split(',');
+        const ap = partes[0]?.trim() || '';
+        const nom = partes[1]?.trim() || '';
+
+        setYaRegistradoEnEsteEvento(false);
+        setFormData((prev) => ({
+          ...prev,
+          apellidos: prev.apellidos || ap,
+          nombres: prev.nombres || nom,
+          sexo: prev.sexo || (hist.esMasculino ? 'MASCULINO' : 'FEMENINO'),
+          celular: prev.celular || hist.celular || '',
+          edad: prev.edad || String(hist.edad || ''),
+          puestoTrabajo: prev.puestoTrabajo || hist.puestoTrabajo || '',
+          maestria: prev.maestria || hist.maestria || '',
+          departamento: prev.departamento || hist.departamento || '',
+          departamentoId: prev.departamentoId || hist.departamentoId || null,
+          provincia: prev.provincia || hist.provincia || '',
+          provinciaId: prev.provinciaId || hist.provinciaId || null,
+          distrito: prev.distrito || hist.distrito || '',
+          distritoId: prev.distritoId || hist.distritoId || null
+        }));
+
+        toast.success('¡Bienvenido de nuevo! Autocompletamos sus datos personales guardados.', {
+          duration: 4000
+        });
+      } else {
+        setYaRegistradoEnEsteEvento(false);
+      }
+    } catch (e) {
+      console.warn('Error verificando correo:', e);
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
 
   const handleDepartamentoChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const deptoName = e.target.value;
@@ -273,6 +380,11 @@ export default function FormWizardReact() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (yaRegistradoEnEsteEvento) {
+      toast.error('Usted ya completó la evaluación para este evento. No se admiten registros duplicados.');
+      return;
+    }
+
     if (!validateStep(1)) {
       goToStep(1);
       return;
@@ -282,11 +394,12 @@ export default function FormWizardReact() {
     const toastId = toast.loading('Guardando respuestas en Supabase...');
 
     const payload: CapacitacionResponseRecord = {
+      capacitacionId: eventoActivo?.id,
       apellidosNombres: `${formData.apellidos.trim()}, ${formData.nombres.trim()}`,
       correo: formData.correo.trim(),
       puestoTrabajo: formData.puestoTrabajo.trim() || '',
-      expositor: CAPACITACION_DEFAULT.expositor,
-      nombreCapacitacion: CAPACITACION_DEFAULT.nombre,
+      expositor: eventoActivo?.expositor || CAPACITACION_DEFAULT.expositor,
+      nombreCapacitacion: eventoActivo?.nombre || CAPACITACION_DEFAULT.nombre,
       esMasculino: formData.sexo === 'MASCULINO',
       sexo: formData.sexo,
       edad: formData.edad || '',
@@ -549,21 +662,43 @@ export default function FormWizardReact() {
                   {/* Correo y Género */}
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
                     <div className="md:col-span-8">
-                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                        Correo Electrónico <span className="text-red-500">*</span>
-                      </label>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <label className="block text-[11px] font-bold text-slate-700">
+                          Correo Electrónico <span className="text-red-500">*</span>
+                        </label>
+                        {checkingEmail && (
+                          <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Verificando...
+                          </span>
+                        )}
+                      </div>
                       <div className="relative flex items-center">
                         <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
                         <input
                           type="email"
                           required
                           value={formData.correo}
-                          onChange={(e) => updateField('correo', e.target.value)}
+                          onChange={(e) => {
+                            updateField('correo', e.target.value);
+                            if (yaRegistradoEnEsteEvento) setYaRegistradoEnEsteEvento(false);
+                          }}
+                          onBlur={handleEmailBlur}
                           placeholder="ejemplo@uss.edu.pe"
                           className="custom-input-light text-xs py-1.5"
                           style={{ paddingLeft: '2.25rem' }}
                         />
                       </div>
+                      {yaRegistradoEnEsteEvento && (
+                        <div className="p-2 rounded-lg bg-amber-50 border border-amber-200/90 flex items-start gap-1.5 text-xs text-amber-900 mt-1.5 animate-fadeIn">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-bold text-[11px] leading-tight">Usted ya cuenta con un registro en este evento</p>
+                            <p className="text-[10px] text-amber-800 leading-tight mt-0.5">
+                              {fechaRegistroPrevio ? `Guardado el ${fechaRegistroPrevio}. ` : ''}Sus datos fueron cargados. El reenvío está deshabilitado para evitar duplicados.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="md:col-span-4">
