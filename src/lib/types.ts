@@ -13,7 +13,6 @@ export interface FormParticipantAttributes {
   capacitacionId?: number;
   apellidosNombres: string;
   correo: string;
-  puestoTrabajo?: string;
   expositor: string;
   nombreCapacitacion: string;
   esMasculino: boolean;

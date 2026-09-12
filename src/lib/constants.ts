@@ -20,8 +20,8 @@ export const MAESTRIAS_USS = [
 ];
 
 export const CAPACITACION_DEFAULT = {
-  nombre: 'Estándares ISO Core del Sistema: SGC USS, Modelo de SUNEDU - Plan de Supervisión',
-  expositor: 'Equipo de Calidad y Acreditación USS'
+  nombre: 'Inducción Maestría USS 202602',
+  expositor: 'Escuela de Posgrado USS'
 };
 
 export interface QuestionItem {

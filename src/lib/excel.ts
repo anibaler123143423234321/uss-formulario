@@ -19,7 +19,6 @@ export function exportResponsesToExcel(records: CapacitacionResponseRecord[], fi
       'Apellidos y Nombres': r.apellidosNombres,
       'Correo': r.correo,
       'Celular': r.celular || 'No registrado',
-      'Puesto de Trabajo': r.puestoTrabajo || 'No especificado',
       'Sexo / Género': r.sexo || '',
       'Edad': r.edad || '',
       'Maestría / Programa': r.maestria || '',
@@ -53,7 +52,6 @@ export function exportResponsesToExcel(records: CapacitacionResponseRecord[], fi
     { wch: 28 }, // Apellidos y Nombres
     { wch: 26 }, // Correo
     { wch: 14 }, // Celular
-    { wch: 22 }, // Puesto
     { wch: 14 }, // Sexo
     { wch: 8 },  // Edad
     { wch: 35 }, // Maestria
@@ -96,7 +94,6 @@ export function exportResponsesToCSV(records: CapacitacionResponseRecord[], file
     'Apellidos_Nombres': r.apellidosNombres,
     'Correo': r.correo,
     'Celular': r.celular,
-    'Puesto': r.puestoTrabajo,
     'Sexo': r.sexo,
     'Edad': r.edad,
     'Maestria': r.maestria,

@@ -74,7 +74,6 @@ async function testSuite() {
   const mockNormalizedResponse = {
     apellidos_nombres: 'Chuman Lluen, Dagner',
     correo: uniqueEmail,
-    puesto_trabajo: 'Ingeniero de Sistemas',
     expositor: 'Equipo de Calidad y Acreditación USS',
     nombre_capacitacion: 'Estándares ISO Core del Sistema: SGC USS, Modelo de SUNEDU',
     es_masculino: true, // Booleano para Sexo

@@ -35,7 +35,6 @@ interface FormDataState {
   apellidos: string;
   celular: string;
   edad: string;
-  puestoTrabajo: string;
   maestria: string;
   departamentoId: number | null;
   provinciaId: number | null;
@@ -71,7 +70,6 @@ const INITIAL_FORM_DATA: FormDataState = {
   apellidos: '',
   celular: '',
   edad: '',
-  puestoTrabajo: '',
   maestria: '',
   departamentoId: null,
   provinciaId: null,
@@ -200,7 +198,6 @@ export default function FormWizardReact() {
       celular: reg.celular || prev.celular,
       sexo: reg.esMasculino ? 'MASCULINO' : 'FEMENINO',
       edad: String(reg.edad || prev.edad || ''),
-      puestoTrabajo: reg.puestoTrabajo || prev.puestoTrabajo || '',
       maestria: reg.maestria || prev.maestria || '',
       departamento: deptoName,
       departamentoId: reg.departamentoId || null,
@@ -476,7 +473,6 @@ export default function FormWizardReact() {
       capacitacionId: eventoActivo?.id,
       apellidosNombres: `${formData.apellidos.trim()}, ${formData.nombres.trim()}`,
       correo: formData.correo.trim(),
-      puestoTrabajo: formData.puestoTrabajo.trim() || '',
       expositor: eventoActivo?.expositor || CAPACITACION_DEFAULT.expositor,
       nombreCapacitacion: eventoActivo?.nombre || CAPACITACION_DEFAULT.nombre,
       esMasculino: formData.sexo === 'MASCULINO',
@@ -912,9 +908,9 @@ export default function FormWizardReact() {
                     </div>
                   </div>
 
-                  {/* Edad, Puesto y Maestría */}
+                  {/* Edad y Maestría */}
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-                    <div className="sm:col-span-3">
+                    <div className="sm:col-span-4">
                       <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
                         Edad
                       </label>
@@ -929,20 +925,7 @@ export default function FormWizardReact() {
                       />
                     </div>
 
-                    <div className="sm:col-span-4">
-                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                        Puesto de Trabajo
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.puestoTrabajo}
-                        onChange={(e) => updateField('puestoTrabajo', e.target.value)}
-                        placeholder="Docente / Especialista"
-                        className="custom-input-light text-xs py-1.5"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-5">
+                    <div className="sm:col-span-8">
                       <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
                         Maestría USS <span className="text-red-500">*</span>
                       </label>
