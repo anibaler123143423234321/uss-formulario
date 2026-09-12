@@ -113,29 +113,49 @@ export async function getEventoActivo(): Promise<{ id: number; nombre: string; e
   return null;
 }
 
-export async function verificarRegistroPrevio(correo: string, capacitacionId?: number, nombreCapacitacion?: string): Promise<{
+export async function verificarRegistroPrevio(
+  correo?: string,
+  celular?: string,
+  capacitacionId?: number,
+  nombreCapacitacion?: string
+): Promise<{
   yaRegistradoEnEsteEvento: boolean;
   registroEsteEvento?: CapacitacionResponseRecord;
   registroHistoricoUsuario?: CapacitacionResponseRecord;
 }> {
   const supabase = getSupabaseClient();
-  if (!supabase || !correo || !correo.includes('@')) {
+  if (!supabase) {
     return { yaRegistradoEnEsteEvento: false };
   }
 
-  const cleanEmail = correo.trim().toLowerCase();
+  const cleanEmail = (correo || '').trim().toLowerCase();
+  const cleanCelular = (celular || '').replace(/\D/g, '').trim();
+
+  const hasEmail = cleanEmail.includes('@') && cleanEmail.includes('.');
+  const hasPhone = cleanCelular.length === 9;
+
+  if (!hasEmail && !hasPhone) {
+    return { yaRegistradoEnEsteEvento: false };
+  }
 
   try {
     // 1. Buscar si ya respondió ESTE evento en específico
     let queryEsteEvento = supabase
       .from('respuestas_capacitacion')
-      .select('*')
-      .ilike('correo', cleanEmail);
+      .select('*');
 
     if (capacitacionId) {
       queryEsteEvento = queryEsteEvento.eq('capacitacion_id', capacitacionId);
     } else if (nombreCapacitacion) {
       queryEsteEvento = queryEsteEvento.eq('nombre_capacitacion', nombreCapacitacion);
+    }
+
+    if (hasEmail && hasPhone) {
+      queryEsteEvento = queryEsteEvento.or(`correo.ilike.${cleanEmail},celular.eq.${cleanCelular}`);
+    } else if (hasPhone) {
+      queryEsteEvento = queryEsteEvento.eq('celular', cleanCelular);
+    } else {
+      queryEsteEvento = queryEsteEvento.ilike('correo', cleanEmail);
     }
 
     const { data: dataEsteEvento, error: errEste } = await queryEsteEvento.limit(1);
@@ -148,14 +168,22 @@ export async function verificarRegistroPrevio(correo: string, capacitacionId?: n
     }
 
     // 2. Si no ha respondido este evento, buscar si ya existe en un evento anterior para autocompletar su perfil
-    const { data: dataHistorico } = await supabase
+    let queryHistorico = supabase
       .from('respuestas_capacitacion')
       .select('*')
-      .ilike('correo', cleanEmail)
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .order('created_at', { ascending: false });
 
-    if (dataHistorico && dataHistorico.length > 0) {
+    if (hasEmail && hasPhone) {
+      queryHistorico = queryHistorico.or(`correo.ilike.${cleanEmail},celular.eq.${cleanCelular}`);
+    } else if (hasPhone) {
+      queryHistorico = queryHistorico.eq('celular', cleanCelular);
+    } else {
+      queryHistorico = queryHistorico.ilike('correo', cleanEmail);
+    }
+
+    const { data: dataHistorico, error: errHist } = await queryHistorico.limit(1);
+
+    if (!errHist && dataHistorico && dataHistorico.length > 0) {
       return {
         yaRegistradoEnEsteEvento: false,
         registroHistoricoUsuario: databaseRowToRecord(dataHistorico[0])

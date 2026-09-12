@@ -19,11 +19,12 @@ import {
   RotateCcw,
   Info,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Lock
 } from 'lucide-react';
 
 import { MAESTRIAS_USS, CAPACITACION_DEFAULT, LIKERT_OPTIONS } from '../lib/constants';
-import { getDepartamentos, getProvincias, getDistritos, type UbigeoItem } from '../lib/ubigeo';
+import { getDepartamentos, getProvincias, getDistritos, LOCAL_DEPARTAMENTOS, type UbigeoItem } from '../lib/ubigeo';
 import { submitCapacitacionResponse, getEventoActivo, verificarRegistroPrevio } from '../lib/supabase';
 import type { CapacitacionResponseRecord } from '../lib/types';
 
@@ -79,28 +80,26 @@ const INITIAL_FORM_DATA: FormDataState = {
   provincia: '',
   distrito: '',
 
-  organizacion_horario: 5,
-  organizacion_instalaciones: 5,
-  organizacion_audiovisuales: 5,
+  organizacion_horario: 0,
+  organizacion_instalaciones: 0,
+  organizacion_audiovisuales: 0,
 
-  capacitador_tema: 5,
-  capacitador_dominio: 5,
-  capacitador_metodologia: 5,
-  capacitador_tiempo: 5,
+  capacitador_tema: 0,
+  capacitador_dominio: 0,
+  capacitador_metodologia: 0,
+  capacitador_tiempo: 0,
 
-  documentacion_calidad: 5,
-  documentacion_contenido: 5,
+  documentacion_calidad: 0,
+  documentacion_contenido: 0,
 
-  satisfaccion_general: 5,
+  satisfaccion_general: 0,
   observaciones_sugerencias: ''
 };
 
 const STEPS = [
   { id: 1, title: 'Datos Generales', short: 'Generales', icon: User },
-  { id: 2, title: 'Organización', short: 'Organización', icon: Building2 },
-  { id: 3, title: 'El Capacitador', short: 'Expositor', icon: Award },
-  { id: 4, title: 'Documentación', short: 'Materiales', icon: FileText },
-  { id: 5, title: 'Satisfacción y Envío', short: 'Finalizar', icon: Sparkles }
+  { id: 2, title: 'Organización y Expositor', short: 'Organización y Expositor', icon: Building2 },
+  { id: 3, title: 'Documentación y Envío', short: 'Materiales y Envío', icon: Sparkles }
 ];
 
 export default function FormWizardReact() {
@@ -142,94 +141,117 @@ export default function FormWizardReact() {
     loadInitial();
   }, []);
 
-  // Validación y autocompletado inteligente al salir del campo correo
-  const handleEmailBlur = async () => {
-    const email = formData.correo.trim().toLowerCase();
-    if (!email || !email.includes('@') || !email.includes('.')) return;
+  // Poblar datos recuperados del usuario y precargar listas de ubigeo
+  const poblarDatosRegistro = async (reg: CapacitacionResponseRecord, esMismoEvento: boolean) => {
+    if (esMismoEvento) {
+      setYaRegistradoEnEsteEvento(true);
+      const fecha = reg.created_at ? new Date(reg.created_at).toLocaleString('es-PE') : '';
+      setFechaRegistroPrevio(fecha);
+      toast.error('Usted ya completó su evaluación para este evento' + (fecha ? ` el ${fecha}` : '') + '. El registro está bloqueado.', {
+        duration: 6000
+      });
+    } else {
+      setYaRegistradoEnEsteEvento(false);
+      toast.success('¡Bienvenido de nuevo! Autocompletamos sus datos personales guardados.', {
+        duration: 4000
+      });
+    }
+
+    const partes = (reg.apellidosNombres || '').split(',');
+    const ap = partes[0]?.trim() || '';
+    const nom = partes[1]?.trim() || '';
+
+    // Cargar listas y nombres de ubigeo si existen IDs
+    const allDeptos = departamentos.length > 0 ? departamentos : LOCAL_DEPARTAMENTOS;
+    let deptoName = reg.departamento || '';
+    let provName = reg.provincia || '';
+    let distName = reg.distrito || '';
+
+    if (reg.departamentoId) {
+      const dFound = allDeptos.find(d => Number(d.id) === Number(reg.departamentoId));
+      if (dFound) deptoName = dFound.name;
+
+      try {
+        const provList = await getProvincias(reg.departamentoId);
+        setProvincias(provList);
+
+        if (reg.provinciaId) {
+          const pFound = provList.find(p => Number(p.id) === Number(reg.provinciaId));
+          if (pFound) provName = pFound.name;
+
+          const distList = await getDistritos(reg.provinciaId, deptoName);
+          setDistritos(distList);
+
+          if (reg.distritoId) {
+            const diFound = distList.find(di => Number(di.id) === Number(reg.distritoId));
+            if (diFound) distName = diFound.name;
+          }
+        }
+      } catch (ubigeoErr) {
+        console.warn('Error precargando listas de ubigeo:', ubigeoErr);
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      apellidos: ap || prev.apellidos,
+      nombres: nom || prev.nombres,
+      correo: reg.correo || prev.correo,
+      celular: reg.celular || prev.celular,
+      sexo: reg.esMasculino ? 'MASCULINO' : 'FEMENINO',
+      edad: String(reg.edad || prev.edad || ''),
+      puestoTrabajo: reg.puestoTrabajo || prev.puestoTrabajo || '',
+      maestria: reg.maestria || prev.maestria || '',
+      departamento: deptoName,
+      departamentoId: reg.departamentoId || null,
+      provincia: provName,
+      provinciaId: reg.provinciaId || null,
+      distrito: distName,
+      distritoId: reg.distritoId || null,
+      ...(esMismoEvento ? {
+        organizacion_horario: reg.organizacion_horario,
+        organizacion_instalaciones: reg.organizacion_instalaciones,
+        organizacion_audiovisuales: reg.organizacion_audiovisuales,
+        capacitador_tema: reg.capacitador_tema,
+        capacitador_dominio: reg.capacitador_dominio,
+        capacitador_metodologia: reg.capacitador_metodologia,
+        capacitador_tiempo: reg.capacitador_tiempo,
+        documentacion_calidad: reg.documentacion_calidad,
+        documentacion_contenido: reg.documentacion_contenido,
+        satisfaccion_general: reg.satisfaccion_general,
+        observaciones_sugerencias: reg.observaciones_sugerencias || ''
+      } : {})
+    }));
+  };
+
+  // Validación y autocompletado inteligente por Celular y/o Correo
+  const verificarRegistro = async (correoVal?: string, celularVal?: string) => {
+    const email = (correoVal !== undefined ? correoVal : formData.correo).trim().toLowerCase();
+    const phone = (celularVal !== undefined ? celularVal : formData.celular).replace(/\D/g, '').trim();
+
+    const hasEmail = email.includes('@') && email.includes('.');
+    const hasPhone = phone.length === 9;
+
+    if (!hasEmail && !hasPhone) return;
 
     setCheckingEmail(true);
     try {
       const res = await verificarRegistroPrevio(
         email,
+        phone,
         eventoActivo?.id,
         eventoActivo?.nombre || CAPACITACION_DEFAULT.nombre
       );
 
-      // CASO 1: YA REGISTRADO EN ESTE EVENTO
       if (res.yaRegistradoEnEsteEvento && res.registroEsteEvento) {
-        const reg = res.registroEsteEvento;
-        setYaRegistradoEnEsteEvento(true);
-        const partes = (reg.apellidosNombres || '').split(',');
-        const ap = partes[0]?.trim() || '';
-        const nom = partes[1]?.trim() || '';
-
-        setFormData((prev) => ({
-          ...prev,
-          apellidos: ap,
-          nombres: nom,
-          sexo: reg.esMasculino ? 'MASCULINO' : 'FEMENINO',
-          celular: reg.celular || '',
-          edad: String(reg.edad || ''),
-          puestoTrabajo: reg.puestoTrabajo || '',
-          maestria: reg.maestria || '',
-          departamento: reg.departamento || '',
-          departamentoId: reg.departamentoId || null,
-          provincia: reg.provincia || '',
-          provinciaId: reg.provinciaId || null,
-          distrito: reg.distrito || '',
-          distritoId: reg.distritoId || null,
-          organizacion_horario: reg.organizacion_horario,
-          organizacion_instalaciones: reg.organizacion_instalaciones,
-          organizacion_audiovisuales: reg.organizacion_audiovisuales,
-          capacitador_tema: reg.capacitador_tema,
-          capacitador_dominio: reg.capacitador_dominio,
-          capacitador_metodologia: reg.capacitador_metodologia,
-          capacitador_tiempo: reg.capacitador_tiempo,
-          documentacion_calidad: reg.documentacion_calidad,
-          documentacion_contenido: reg.documentacion_contenido,
-          satisfaccion_general: reg.satisfaccion_general,
-          observaciones_sugerencias: reg.observaciones_sugerencias || ''
-        }));
-
-        const fecha = reg.created_at ? new Date(reg.created_at).toLocaleString('es-PE') : '';
-        setFechaRegistroPrevio(fecha);
-        toast.error('Usted ya completó su evaluación para este evento' + (fecha ? ` el ${fecha}` : '') + '.', {
-          duration: 5000
-        });
-
-      // CASO 2: NUEVO EVENTO, PERO USUARIO CONOCIDO (Autocompletar datos para ahorrarle tiempo)
+        await poblarDatosRegistro(res.registroEsteEvento, true);
       } else if (res.registroHistoricoUsuario) {
-        const hist = res.registroHistoricoUsuario;
-        const partes = (hist.apellidosNombres || '').split(',');
-        const ap = partes[0]?.trim() || '';
-        const nom = partes[1]?.trim() || '';
-
-        setYaRegistradoEnEsteEvento(false);
-        setFormData((prev) => ({
-          ...prev,
-          apellidos: prev.apellidos || ap,
-          nombres: prev.nombres || nom,
-          sexo: prev.sexo || (hist.esMasculino ? 'MASCULINO' : 'FEMENINO'),
-          celular: prev.celular || hist.celular || '',
-          edad: prev.edad || String(hist.edad || ''),
-          puestoTrabajo: prev.puestoTrabajo || hist.puestoTrabajo || '',
-          maestria: prev.maestria || hist.maestria || '',
-          departamento: prev.departamento || hist.departamento || '',
-          departamentoId: prev.departamentoId || hist.departamentoId || null,
-          provincia: prev.provincia || hist.provincia || '',
-          provinciaId: prev.provinciaId || hist.provinciaId || null,
-          distrito: prev.distrito || hist.distrito || '',
-          distritoId: prev.distritoId || hist.distritoId || null
-        }));
-
-        toast.success('¡Bienvenido de nuevo! Autocompletamos sus datos personales guardados.', {
-          duration: 4000
-        });
+        await poblarDatosRegistro(res.registroHistoricoUsuario, false);
       } else {
         setYaRegistradoEnEsteEvento(false);
       }
     } catch (e) {
-      console.warn('Error verificando correo:', e);
+      console.warn('Error verificando registro:', e);
     } finally {
       setCheckingEmail(false);
     }
@@ -314,12 +336,21 @@ export default function FormWizardReact() {
 
   const validateStep = (step: number): boolean => {
     if (step === 1) {
+      if (yaRegistradoEnEsteEvento) {
+        toast.error('Usted ya completó su evaluación para este evento. No se permite continuar ni registrarse nuevamente.');
+        return false;
+      }
+      const celClean = formData.celular.replace(/\D/g, '');
+      if (celClean.length !== 9) {
+        toast.error('El número de celular debe tener exactamente 9 dígitos numéricos.');
+        return false;
+      }
       if (!formData.correo || !formData.correo.includes('@')) {
         toast.error('Por favor, ingrese un correo válido.');
         return false;
       }
       if (!formData.sexo) {
-        toast.error('Por favor, seleccione género.');
+        toast.error('Por favor, seleccione su género (Hombre o Mujer).');
         return false;
       }
       if (!formData.nombres.trim()) {
@@ -328,10 +359,6 @@ export default function FormWizardReact() {
       }
       if (!formData.apellidos.trim()) {
         toast.error('Por favor, complete sus apellidos.');
-        return false;
-      }
-      if (!formData.celular.trim() || formData.celular.replace(/\D/g, '').length < 9) {
-        toast.error('Ingrese un celular de al menos 9 dígitos.');
         return false;
       }
       if (!formData.maestria) {
@@ -351,10 +378,49 @@ export default function FormWizardReact() {
         return false;
       }
     }
+
+    if (step === 2) {
+      if (
+        formData.organizacion_horario === 0 ||
+        formData.organizacion_instalaciones === 0 ||
+        formData.organizacion_audiovisuales === 0
+      ) {
+        toast.error('Por favor, califique todos los aspectos de la Organización.');
+        return false;
+      }
+      if (
+        formData.capacitador_tema === 0 ||
+        formData.capacitador_dominio === 0 ||
+        formData.capacitador_metodologia === 0 ||
+        formData.capacitador_tiempo === 0
+      ) {
+        toast.error('Por favor, califique todos los aspectos del Expositor.');
+        return false;
+      }
+    }
+
+    if (step === 3) {
+      if (
+        formData.documentacion_calidad === 0 ||
+        formData.documentacion_contenido === 0
+      ) {
+        toast.error('Por favor, califique la Documentación y Materiales.');
+        return false;
+      }
+      if (formData.satisfaccion_general === 0) {
+        toast.error('Por favor, califique su nivel de Satisfacción General.');
+        return false;
+      }
+    }
+
     return true;
   };
 
   const nextStep = () => {
+    if (yaRegistradoEnEsteEvento) {
+      toast.error('Usted ya completó su evaluación para este evento. El avance a los siguientes pasos está bloqueado.');
+      return;
+    }
     if (validateStep(currentStep)) {
       setDirection(1);
       setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
@@ -367,6 +433,10 @@ export default function FormWizardReact() {
   };
 
   const goToStep = (stepNumber: number) => {
+    if (yaRegistradoEnEsteEvento && stepNumber > 1) {
+      toast.error('Usted ya completó su evaluación para este evento. Los siguientes pasos están bloqueados.');
+      return;
+    }
     if (stepNumber < currentStep) {
       setDirection(-1);
       setCurrentStep(stepNumber);
@@ -387,6 +457,15 @@ export default function FormWizardReact() {
 
     if (!validateStep(1)) {
       goToStep(1);
+      return;
+    }
+
+    if (!validateStep(2)) {
+      goToStep(2);
+      return;
+    }
+
+    if (!validateStep(3)) {
       return;
     }
 
@@ -585,44 +664,62 @@ export default function FormWizardReact() {
             <div className="w-full bg-slate-100 h-1.5 rounded-full mb-2 overflow-hidden">
               <motion.div
                 className="h-full bg-gradient-to-r from-blue-600 to-indigo-600"
-                initial={{ width: '20%' }}
+                initial={{ width: '33%' }}
                 animate={{ width: `${(currentStep / STEPS.length) * 100}%` }}
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
               />
             </div>
 
-            {/* Pasos en fila compacta */}
-            <div className="grid grid-cols-5 gap-1">
+            {/* Pasos en fila compacta (3 Tabs) */}
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
               {STEPS.map((step) => {
                 const IconComponent = step.icon;
                 const isActive = currentStep === step.id;
                 const isCompleted = currentStep > step.id;
+                const isBlocked = yaRegistradoEnEsteEvento && step.id > 1;
 
                 return (
                   <button
                     key={step.id}
                     type="button"
-                    onClick={() => goToStep(step.id)}
-                    className={`flex items-center justify-center sm:justify-start gap-1.5 p-1.5 rounded-lg text-left transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-900 border border-blue-200 font-bold'
+                    disabled={isBlocked}
+                    onClick={() => {
+                      if (isBlocked) {
+                        toast.error('Usted ya completó su evaluación para este evento. Avance bloqueado.');
+                        return;
+                      }
+                      goToStep(step.id);
+                    }}
+                    className={`flex items-center justify-center sm:justify-start gap-1.5 p-1.5 rounded-lg text-left transition-all ${
+                      isBlocked
+                        ? 'opacity-40 cursor-not-allowed text-slate-400 bg-slate-50'
+                        : isActive
+                        ? 'bg-blue-50 text-blue-900 border border-blue-200 font-bold cursor-pointer'
                         : isCompleted
-                        ? 'text-slate-600 hover:bg-slate-50'
-                        : 'text-slate-400 hover:text-slate-600'
+                        ? 'text-slate-600 hover:bg-slate-50 cursor-pointer'
+                        : 'text-slate-400 hover:text-slate-600 cursor-pointer'
                     }`}
                   >
                     <span
                       className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 transition-all ${
-                        isActive
+                        isBlocked
+                          ? 'bg-slate-200 text-slate-500'
+                          : isActive
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : isCompleted
                           ? 'bg-emerald-500 text-white'
                           : 'bg-slate-100 text-slate-500'
                       }`}
                     >
-                      {isCompleted ? <CheckCircle2 className="w-3.5 h-3.5" /> : <IconComponent className="w-3.5 h-3.5" />}
+                      {isBlocked ? (
+                        <Lock className="w-3.5 h-3.5 text-slate-500" />
+                      ) : isCompleted ? (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      ) : (
+                        <IconComponent className="w-3.5 h-3.5" />
+                      )}
                     </span>
-                    <span className={`hidden sm:inline text-xs truncate leading-tight ${isActive ? 'text-blue-950 font-bold' : 'text-slate-600'}`}>
+                    <span className={`hidden sm:inline text-xs truncate leading-tight ${isActive ? 'text-blue-950 font-bold' : isBlocked ? 'text-slate-400' : 'text-slate-600'}`}>
                       {step.short}
                     </span>
                   </button>
@@ -666,7 +763,7 @@ export default function FormWizardReact() {
                         <label className="block text-[11px] font-bold text-slate-700">
                           Correo Electrónico <span className="text-red-500">*</span>
                         </label>
-                        {checkingEmail && (
+                        {checkingEmail && formData.correo.includes('@') && (
                           <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
                             <Loader2 className="w-3 h-3 animate-spin" /> Verificando...
                           </span>
@@ -682,19 +779,29 @@ export default function FormWizardReact() {
                             updateField('correo', e.target.value);
                             if (yaRegistradoEnEsteEvento) setYaRegistradoEnEsteEvento(false);
                           }}
-                          onBlur={handleEmailBlur}
+                          onBlur={() => {
+                            if (formData.correo.includes('@') && formData.correo.includes('.')) {
+                              verificarRegistro(formData.correo, formData.celular);
+                            }
+                          }}
                           placeholder="ejemplo@uss.edu.pe"
                           className="custom-input-light text-xs py-1.5"
                           style={{ paddingLeft: '2.25rem' }}
                         />
                       </div>
                       {yaRegistradoEnEsteEvento && (
-                        <div className="p-2 rounded-lg bg-amber-50 border border-amber-200/90 flex items-start gap-1.5 text-xs text-amber-900 mt-1.5 animate-fadeIn">
-                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="font-bold text-[11px] leading-tight">Usted ya cuenta con un registro en este evento</p>
+                        <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-300 flex items-start gap-2 text-xs text-amber-950 mt-1.5 animate-fadeIn shadow-2xs">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-extrabold text-[11px] text-amber-950 leading-tight">Usted ya cuenta con un registro en este evento</p>
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-amber-200/80 text-amber-900 px-1.5 py-0.5 rounded">
+                                <Lock className="w-2.5 h-2.5 text-amber-800" />
+                                Bloqueado
+                              </span>
+                            </div>
                             <p className="text-[10px] text-amber-800 leading-tight mt-0.5">
-                              {fechaRegistroPrevio ? `Guardado el ${fechaRegistroPrevio}. ` : ''}Sus datos fueron cargados. El reenvío está deshabilitado para evitar duplicados.
+                              {fechaRegistroPrevio ? `Registrado el ${fechaRegistroPrevio}. ` : ''}Sus respuestas fueron cargadas. El avance y el reenvío están deshabilitados para evitar duplicados.
                             </p>
                           </div>
                         </div>
@@ -763,17 +870,41 @@ export default function FormWizardReact() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                        Celular <span className="text-red-500">*</span>
-                      </label>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <label className="block text-[11px] font-bold text-slate-700">
+                          Celular (9 dígitos) <span className="text-red-500">*</span>
+                        </label>
+                        {checkingEmail && formData.celular.length === 9 && (
+                          <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Verificando...
+                          </span>
+                        )}
+                      </div>
                       <div className="relative flex items-center">
                         <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
                         <input
                           type="tel"
+                          inputMode="numeric"
                           required
+                          maxLength={9}
                           value={formData.celular}
-                          onChange={(e) => updateField('celular', e.target.value)}
-                          placeholder="999 888 777"
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 9);
+                            updateField('celular', val);
+                            if (yaRegistradoEnEsteEvento) setYaRegistradoEnEsteEvento(false);
+                            if (val.length === 9) {
+                              verificarRegistro(formData.correo, val);
+                            }
+                          }}
+                          onBlur={() => {
+                            const val = formData.celular.replace(/\D/g, '');
+                            if (val.length > 0 && val.length !== 9) {
+                              toast.error('El número de celular debe tener exactamente 9 dígitos.');
+                            } else if (val.length === 9) {
+                              verificarRegistro(formData.correo, val);
+                            }
+                          }}
+                          placeholder="999888777"
                           className="custom-input-light text-xs py-1.5"
                           style={{ paddingLeft: '2.25rem' }}
                         />
@@ -904,43 +1035,107 @@ export default function FormWizardReact() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -direction * 15 }}
                   transition={{ duration: 0.2 }}
-                  className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-2.5"
+                  className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200 shadow-2xs space-y-3"
                 >
-                  <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                    <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-800 flex items-center justify-center font-bold">
-                      <Building2 className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h2 className="text-sm font-extrabold text-slate-900 leading-tight">
-                        Paso 2: Organización de la Capacitación
-                      </h2>
-                      <p className="text-[11px] text-slate-500">
-                        Aspectos logísticos y ambientales del evento
-                      </p>
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-800 flex items-center justify-center font-bold">
+                        <Building2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-extrabold text-slate-900 leading-tight">
+                          Paso 2: Organización y Evaluación del Expositor
+                        </h2>
+                        <p className="text-[11px] text-slate-500">
+                          Logística, equipamiento y desempeño del capacitador
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <LikertSelector
-                      questionNumber={1}
-                      label="El horario y duración de la capacitación."
-                      value={formData.organizacion_horario}
-                      onChange={(val) => updateField('organizacion_horario', val)}
-                    />
+                  {/* Contenedor en 2 columnas */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Columna 1: Organización */}
+                    <div className="bg-slate-50/70 rounded-xl p-3 border border-slate-200/90 space-y-2">
+                      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-1.5">
+                        <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
+                          <Building2 className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-extrabold text-slate-900 leading-tight">
+                            Organización de la Capacitación
+                          </h3>
+                          <p className="text-[10px] text-slate-500">
+                            Aspectos logísticos y del entorno
+                          </p>
+                        </div>
+                      </div>
 
-                    <LikertSelector
-                      questionNumber={2}
-                      label="Las instalaciones donde se realizó la capacitación."
-                      value={formData.organizacion_instalaciones}
-                      onChange={(val) => updateField('organizacion_instalaciones', val)}
-                    />
+                      <div className="space-y-2">
+                        <LikertSelector
+                          questionNumber={1}
+                          label="El horario y duración de la capacitación."
+                          value={formData.organizacion_horario}
+                          onChange={(val) => updateField('organizacion_horario', val)}
+                        />
+                        <LikertSelector
+                          questionNumber={2}
+                          label="Las instalaciones donde se realizó la capacitación."
+                          value={formData.organizacion_instalaciones}
+                          onChange={(val) => updateField('organizacion_instalaciones', val)}
+                        />
+                        <LikertSelector
+                          questionNumber={3}
+                          label="Los medios audiovisuales y equipamiento tecnológico."
+                          value={formData.organizacion_audiovisuales}
+                          onChange={(val) => updateField('organizacion_audiovisuales', val)}
+                        />
+                      </div>
+                    </div>
 
-                    <LikertSelector
-                      questionNumber={3}
-                      label="Los medios audiovisuales y equipamiento tecnológico."
-                      value={formData.organizacion_audiovisuales}
-                      onChange={(val) => updateField('organizacion_audiovisuales', val)}
-                    />
+                    {/* Columna 2: Expositor */}
+                    <div className="bg-slate-50/70 rounded-xl p-3 border border-slate-200/90 space-y-2">
+                      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-1.5">
+                        <div className="w-6 h-6 rounded-md bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
+                          <Award className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-extrabold text-slate-900 leading-tight">
+                            El Capacitador / Expositor
+                          </h3>
+                          <p className="text-[10px] text-slate-500">
+                            Dominio, metodología y resolución de dudas
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <LikertSelector
+                          questionNumber={1}
+                          label="La selección del tema tratado por el expositor."
+                          value={formData.capacitador_tema}
+                          onChange={(val) => updateField('capacitador_tema', val)}
+                        />
+                        <LikertSelector
+                          questionNumber={2}
+                          label="El dominio del expositor sobre la materia."
+                          value={formData.capacitador_dominio}
+                          onChange={(val) => updateField('capacitador_dominio', val)}
+                        />
+                        <LikertSelector
+                          questionNumber={3}
+                          label="La metodología de trabajo y dinámicas aplicadas."
+                          value={formData.capacitador_metodologia}
+                          onChange={(val) => updateField('capacitador_metodologia', val)}
+                        />
+                        <LikertSelector
+                          questionNumber={4}
+                          label="El tiempo de participación y resolución de dudas."
+                          value={formData.capacitador_tiempo}
+                          onChange={(val) => updateField('capacitador_tiempo', val)}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -952,145 +1147,106 @@ export default function FormWizardReact() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -direction * 15 }}
                   transition={{ duration: 0.2 }}
-                  className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-2.5"
+                  className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200 shadow-2xs space-y-3"
                 >
-                  <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                    <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-800 flex items-center justify-center font-bold">
-                      <Award className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h2 className="text-sm font-extrabold text-slate-900 leading-tight">
-                        Paso 3: Desarrollo del Evento — El Capacitador
-                      </h2>
-                      <p className="text-[11px] text-slate-500">
-                        Dominio, metodología y claridad del expositor
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <LikertSelector
-                      questionNumber={1}
-                      label="La selección del tema tratado por el expositor."
-                      value={formData.capacitador_tema}
-                      onChange={(val) => updateField('capacitador_tema', val)}
-                    />
-
-                    <LikertSelector
-                      questionNumber={2}
-                      label="El dominio del expositor sobre la materia."
-                      value={formData.capacitador_dominio}
-                      onChange={(val) => updateField('capacitador_dominio', val)}
-                    />
-
-                    <LikertSelector
-                      questionNumber={3}
-                      label="La metodología de trabajo y dinámicas aplicadas."
-                      value={formData.capacitador_metodologia}
-                      onChange={(val) => updateField('capacitador_metodologia', val)}
-                    />
-
-                    <LikertSelector
-                      questionNumber={4}
-                      label="El tiempo de participación y resolución de dudas del expositor."
-                      value={formData.capacitador_tiempo}
-                      onChange={(val) => updateField('capacitador_tiempo', val)}
-                    />
-                  </div>
-                </motion.div>
-              )}
-
-              {currentStep === 4 && (
-                <motion.div
-                  key="step-4"
-                  initial={{ opacity: 0, x: direction * 15 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -direction * 15 }}
-                  transition={{ duration: 0.2 }}
-                  className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-2.5"
-                >
-                  <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                    <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-800 flex items-center justify-center font-bold">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h2 className="text-sm font-extrabold text-slate-900 leading-tight">
-                        Paso 4: Documentación y Materiales
-                      </h2>
-                      <p className="text-[11px] text-slate-500">
-                        Claridad y calidad de los recursos compartidos
-                      </p>
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-800 flex items-center justify-center font-bold">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-extrabold text-slate-900 leading-tight">
+                          Paso 3: Documentación, Satisfacción y Envío Final
+                        </h2>
+                        <p className="text-[11px] text-slate-500">
+                          Recursos entregados, satisfacción general y confirmación
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <LikertSelector
-                      questionNumber={1}
-                      label="La calidad de las diapositivas y recursos utilizados."
-                      value={formData.documentacion_calidad}
-                      onChange={(val) => updateField('documentacion_calidad', val)}
-                    />
+                  {/* Contenedor en 2 columnas */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Columna 1: Documentación y Materiales */}
+                    <div className="bg-slate-50/70 rounded-xl p-3 border border-slate-200/90 space-y-2">
+                      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-1.5">
+                        <div className="w-6 h-6 rounded-md bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
+                          <FileText className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-extrabold text-slate-900 leading-tight">
+                            Documentación y Materiales
+                          </h3>
+                          <p className="text-[10px] text-slate-500">
+                            Claridad y calidad de los recursos compartidos
+                          </p>
+                        </div>
+                      </div>
 
-                    <LikertSelector
-                      questionNumber={2}
-                      label="El contenido y claridad conceptual de las diapositivas."
-                      value={formData.documentacion_contenido}
-                      onChange={(val) => updateField('documentacion_contenido', val)}
-                    />
-                  </div>
-                </motion.div>
-              )}
+                      <div className="space-y-2">
+                        <LikertSelector
+                          questionNumber={1}
+                          label="La calidad de las diapositivas y recursos utilizados."
+                          value={formData.documentacion_calidad}
+                          onChange={(val) => updateField('documentacion_calidad', val)}
+                        />
 
-              {currentStep === 5 && (
-                <motion.div
-                  key="step-5"
-                  initial={{ opacity: 0, x: direction * 15 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -direction * 15 }}
-                  transition={{ duration: 0.2 }}
-                  className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-2xs space-y-3"
-                >
-                  <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                    <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-800 flex items-center justify-center font-bold">
-                      <Sparkles className="w-4 h-4" />
+                        <LikertSelector
+                          questionNumber={2}
+                          label="El contenido y claridad conceptual de las diapositivas."
+                          value={formData.documentacion_contenido}
+                          onChange={(val) => updateField('documentacion_contenido', val)}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-sm font-extrabold text-slate-900 leading-tight">
-                        Paso 5: Satisfacción Global y Envío Final
-                      </h2>
-                      <p className="text-[11px] text-slate-500">
-                        Califique su experiencia total y envíe su respuesta
-                      </p>
-                    </div>
-                  </div>
 
-                  <LikertSelector
-                    label="¿Cuál es su nivel de satisfacción general con la capacitación recibida?"
-                    value={formData.satisfaccion_general}
-                    onChange={(val) => updateField('satisfaccion_general', val)}
-                  />
+                    {/* Columna 2: Satisfacción y Sugerencias */}
+                    <div className="bg-slate-50/70 rounded-xl p-3 border border-slate-200/90 space-y-2 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 border-b border-slate-200/80 pb-1.5">
+                          <div className="w-6 h-6 rounded-md bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                            <Sparkles className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-extrabold text-slate-900 leading-tight">
+                              Satisfacción Global y Sugerencias
+                            </h3>
+                            <p className="text-[10px] text-slate-500">
+                              Califique su experiencia total con el evento
+                            </p>
+                          </div>
+                        </div>
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
-                      Observaciones y/o Sugerencias de Mejora (Opcional)
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={formData.observaciones_sugerencias}
-                      onChange={(e) => updateField('observaciones_sugerencias', e.target.value)}
-                      placeholder="Indique sugerencias o temas a profundizar..."
-                      className="custom-input-light text-xs resize-none py-1.5"
-                    />
-                  </div>
+                        <LikertSelector
+                          label="¿Cuál es su nivel de satisfacción general con la capacitación recibida?"
+                          value={formData.satisfaccion_general}
+                          onChange={(val) => updateField('satisfaccion_general', val)}
+                        />
 
-                  <div className="bg-blue-50/60 rounded-lg p-2.5 border border-blue-200/70 text-xs text-slate-700">
-                    <div className="flex items-center gap-1.5 font-bold text-blue-900 mb-1 text-[11px]">
-                      <Info className="w-3.5 h-3.5 text-blue-700" />
-                      <span>Resumen de Envío</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-1 text-[11px]">
-                      <p className="truncate"><span className="text-slate-500">Participante:</span> <span className="font-semibold">{formData.apellidos}, {formData.nombres}</span></p>
-                      <p className="truncate"><span className="text-slate-500">Correo:</span> <span className="font-semibold">{formData.correo}</span></p>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-0.5">
+                            Observaciones y/o Sugerencias de Mejora (Opcional)
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={formData.observaciones_sugerencias}
+                            onChange={(e) => updateField('observaciones_sugerencias', e.target.value)}
+                            placeholder="Indique sugerencias o temas a profundizar..."
+                            className="custom-input-light text-xs resize-none py-1.5"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-blue-50/80 rounded-lg p-2.5 border border-blue-200/80 text-xs text-slate-700 mt-1">
+                        <div className="flex items-center gap-1.5 font-bold text-blue-900 mb-1 text-[11px]">
+                          <Info className="w-3.5 h-3.5 text-blue-700" />
+                          <span>Resumen del Registro</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 text-[11px]">
+                          <p className="truncate"><span className="text-slate-500">Participante:</span> <span className="font-semibold">{formData.apellidos}, {formData.nombres}</span></p>
+                          <p className="truncate"><span className="text-slate-500">Correo:</span> <span className="font-semibold">{formData.correo}</span></p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -1114,14 +1270,26 @@ export default function FormWizardReact() {
               )}
 
               {currentStep < STEPS.length ? (
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-xs transition-all hover:scale-[1.01] cursor-pointer"
-                >
-                  Siguiente Paso
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                yaRegistradoEnEsteEvento ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-50 text-red-700 font-bold text-xs border border-red-200 cursor-not-allowed shadow-none"
+                    title="Usted ya completó su evaluación para este evento. No se admiten registros duplicados."
+                  >
+                    <Lock className="w-3.5 h-3.5 text-red-600" />
+                    Registro Ya Completado (Bloqueado)
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-xs transition-all hover:scale-[1.01] cursor-pointer"
+                  >
+                    Siguiente Paso
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )
               ) : (
                 <button
                   type="submit"
