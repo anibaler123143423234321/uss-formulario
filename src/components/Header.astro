@@ -1,5 +1,15 @@
 ---
 // Header.astro - Totalmente blanco e institucional USS
+import { getEventoActivo } from '../lib/supabase';
+import { CAPACITACION_DEFAULT } from '../lib/constants';
+
+let nombreEvento = CAPACITACION_DEFAULT.nombre;
+try {
+  const ev = await getEventoActivo();
+  if (ev?.nombre) nombreEvento = ev.nombre;
+} catch (e) {
+  console.warn('Error leyendo evento en SSR Header:', e);
+}
 ---
 
 <header class="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md shadow-xs py-2 sm:py-2.5">
@@ -15,13 +25,16 @@
         />
       </div>
 
-      <!-- Centro: Formulario de Capacitación + Nombre del Evento -->
+      <!-- Centro: Formulario de Capacitación + Nombre del Evento Dinámico -->
       <div class="flex-1 flex flex-col items-center justify-center text-center px-1">
         <span class="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 shadow-2xs">
           Formulario de Capacitación
         </span>
-        <h1 class="text-xs sm:text-sm md:text-base font-extrabold text-blue-950 tracking-tight leading-tight mt-0.5 sm:mt-1">
-          Inducción Maestría USS 202602
+        <h1
+          id="header-evento-nombre"
+          class="text-xs sm:text-sm md:text-base font-extrabold text-blue-950 tracking-tight leading-tight mt-0.5 sm:mt-1"
+        >
+          {nombreEvento}
         </h1>
       </div>
 

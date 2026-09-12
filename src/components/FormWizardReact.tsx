@@ -136,6 +136,10 @@ export default function FormWizardReact() {
         setMaestrias(listMaestrias);
         if (evento) {
           setEventoActivo(evento);
+          const el = document.getElementById('header-evento-nombre');
+          if (el && evento.nombre) {
+            el.textContent = evento.nombre;
+          }
         }
       } catch (err) {
         console.error('Error cargando datos iniciales:', err);
