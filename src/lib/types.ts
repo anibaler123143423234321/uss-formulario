@@ -9,16 +9,23 @@ export interface CapacitacionEvento {
   activo: boolean;
 }
 
+export interface MaestriaItem {
+  id: number;
+  nombre: string;
+  activo?: boolean;
+}
+
 export interface FormParticipantAttributes {
   capacitacionId?: number;
+  maestriaId?: number;
   apellidosNombres: string;
   correo: string;
-  expositor: string;
-  nombreCapacitacion: string;
+  expositor?: string;
+  nombreCapacitacion?: string;
   esMasculino: boolean;
   edad: string | number;
   celular: string;
-  maestria: string;
+  maestria?: string;
   departamentoId: number;
   provinciaId: number;
   distritoId: number;

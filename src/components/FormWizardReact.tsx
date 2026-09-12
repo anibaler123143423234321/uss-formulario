@@ -23,10 +23,10 @@ import {
   Lock
 } from 'lucide-react';
 
-import { MAESTRIAS_USS, CAPACITACION_DEFAULT, LIKERT_OPTIONS } from '../lib/constants';
+import { MAESTRIAS_USS, MAESTRIAS_FALLBACK, CAPACITACION_DEFAULT, LIKERT_OPTIONS } from '../lib/constants';
 import { getDepartamentos, getProvincias, getDistritos, LOCAL_DEPARTAMENTOS, type UbigeoItem } from '../lib/ubigeo';
-import { submitCapacitacionResponse, getEventoActivo, verificarRegistroPrevio } from '../lib/supabase';
-import type { CapacitacionResponseRecord } from '../lib/types';
+import { submitCapacitacionResponse, getEventoActivo, getMaestrias, verificarRegistroPrevio } from '../lib/supabase';
+import type { CapacitacionResponseRecord, MaestriaItem } from '../lib/types';
 
 interface FormDataState {
   correo: string;
@@ -35,6 +35,7 @@ interface FormDataState {
   apellidos: string;
   celular: string;
   edad: string;
+  maestriaId: number | null;
   maestria: string;
   departamentoId: number | null;
   provinciaId: number | null;
@@ -70,6 +71,7 @@ const INITIAL_FORM_DATA: FormDataState = {
   apellidos: '',
   celular: '',
   edad: '',
+  maestriaId: null,
   maestria: '',
   departamentoId: null,
   provinciaId: null,
@@ -114,21 +116,24 @@ export default function FormWizardReact() {
   const [yaRegistradoEnEsteEvento, setYaRegistradoEnEsteEvento] = useState<boolean>(false);
   const [fechaRegistroPrevio, setFechaRegistroPrevio] = useState<string>('');
 
-  // Estados de Ubigeo
+  // Estados de Ubigeo y Maestrias
   const [departamentos, setDepartamentos] = useState<UbigeoItem[]>([]);
   const [provincias, setProvincias] = useState<UbigeoItem[]>([]);
   const [distritos, setDistritos] = useState<UbigeoItem[]>([]);
+  const [maestrias, setMaestrias] = useState<MaestriaItem[]>([]);
   const [loadingProvs, setLoadingProvs] = useState<boolean>(false);
   const [loadingDists, setLoadingDists] = useState<boolean>(false);
 
   useEffect(() => {
     async function loadInitial() {
       try {
-        const [deptos, evento] = await Promise.all([
+        const [deptos, evento, listMaestrias] = await Promise.all([
           getDepartamentos(),
-          getEventoActivo()
+          getEventoActivo(),
+          getMaestrias()
         ]);
         setDepartamentos(deptos);
+        setMaestrias(listMaestrias);
         if (evento) {
           setEventoActivo(evento);
         }
@@ -198,6 +203,7 @@ export default function FormWizardReact() {
       celular: reg.celular || prev.celular,
       sexo: reg.esMasculino ? 'MASCULINO' : 'FEMENINO',
       edad: String(reg.edad || prev.edad || ''),
+      maestriaId: reg.maestriaId || (maestrias.find(m => m.nombre.trim().toUpperCase() === (reg.maestria || '').trim().toUpperCase())?.id ?? prev.maestriaId),
       maestria: reg.maestria || prev.maestria || '',
       departamento: deptoName,
       departamentoId: reg.departamentoId || null,
@@ -358,7 +364,7 @@ export default function FormWizardReact() {
         toast.error('Por favor, complete sus apellidos.');
         return false;
       }
-      if (!formData.maestria) {
+      if (!formData.maestriaId && !formData.maestria) {
         toast.error('Seleccione su maestría.');
         return false;
       }
@@ -471,10 +477,9 @@ export default function FormWizardReact() {
 
     const payload: CapacitacionResponseRecord = {
       capacitacionId: eventoActivo?.id,
+      maestriaId: formData.maestriaId || undefined,
       apellidosNombres: `${formData.apellidos.trim()}, ${formData.nombres.trim()}`,
       correo: formData.correo.trim(),
-      expositor: eventoActivo?.expositor || CAPACITACION_DEFAULT.expositor,
-      nombreCapacitacion: eventoActivo?.nombre || CAPACITACION_DEFAULT.nombre,
       esMasculino: formData.sexo === 'MASCULINO',
       sexo: formData.sexo,
       edad: formData.edad || '',
@@ -931,14 +936,23 @@ export default function FormWizardReact() {
                       </label>
                       <select
                         required
-                        value={formData.maestria}
-                        onChange={(e) => updateField('maestria', e.target.value)}
+                        value={formData.maestriaId || ''}
+                        onChange={(e) => {
+                          const idNum = Number(e.target.value) || null;
+                          const allM = maestrias.length > 0 ? maestrias : MAESTRIAS_FALLBACK;
+                          const found = allM.find(m => m.id === idNum);
+                          setFormData(prev => ({
+                            ...prev,
+                            maestriaId: idNum,
+                            maestria: found ? found.nombre : ''
+                          }));
+                        }}
                         className="custom-input-light text-xs py-1.5"
                       >
                         <option value="">Seleccione Maestría...</option>
-                        {MAESTRIAS_USS.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
+                        {(maestrias.length > 0 ? maestrias : MAESTRIAS_FALLBACK).map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.nombre}
                           </option>
                         ))}
                       </select>

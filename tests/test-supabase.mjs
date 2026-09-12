@@ -74,12 +74,11 @@ async function testSuite() {
   const mockNormalizedResponse = {
     apellidos_nombres: 'Chuman Lluen, Dagner',
     correo: uniqueEmail,
-    expositor: 'Equipo de Calidad y Acreditación USS',
-    nombre_capacitacion: 'Estándares ISO Core del Sistema: SGC USS, Modelo de SUNEDU',
+    capacitacion_id: 2,
+    maestria_id: 9,
     es_masculino: true, // Booleano para Sexo
     edad: 30,
     celular: '987654321',
-    maestria: 'MAESTRÍA EN ADMINISTRACIÓN DE NEGOCIOS - MBA',
 
     // Relaciones por ID
     departamento_id: deptoId,

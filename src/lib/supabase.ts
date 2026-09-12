@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { CapacitacionResponseRecord } from './types';
+import type { CapacitacionResponseRecord, MaestriaItem } from './types';
+import { MAESTRIAS_FALLBACK } from './constants';
 
 // Obtener cliente oficial de Supabase estrictamente desde variables de entorno
 export function getSupabaseClient(): SupabaseClient | null {
@@ -23,14 +24,12 @@ export function getSupabaseClient(): SupabaseClient | null {
 function recordToDatabaseRow(record: CapacitacionResponseRecord) {
   return {
     capacitacion_id: record.capacitacionId ? Number(record.capacitacionId) : null,
+    maestria_id: record.maestriaId ? Number(record.maestriaId) : null,
     apellidos_nombres: record.apellidosNombres,
     correo: record.correo,
-    expositor: record.expositor,
-    nombre_capacitacion: record.nombreCapacitacion,
     es_masculino: typeof record.esMasculino === 'boolean' ? record.esMasculino : (record.sexo === 'MASCULINO'),
     edad: record.edad ? String(record.edad) : null,
     celular: record.celular,
-    maestria: record.maestria,
     departamento_id: record.departamentoId ? Number(record.departamentoId) : null,
     provincia_id: record.provinciaId ? Number(record.provinciaId) : null,
     distrito_id: record.distritoId ? Number(record.distritoId) : null,
@@ -54,6 +53,7 @@ function databaseRowToRecord(row: any): CapacitacionResponseRecord {
     created_at: row.created_at,
     sync_status: 'synced',
     capacitacionId: row.capacitacion_id ? Number(row.capacitacion_id) : undefined,
+    maestriaId: row.maestria_id ? Number(row.maestria_id) : undefined,
     apellidosNombres: row.apellidos_nombres || '',
     correo: row.correo || '',
     expositor: row.expositor || '',
@@ -62,7 +62,7 @@ function databaseRowToRecord(row: any): CapacitacionResponseRecord {
     sexo: row.es_masculino === true ? 'MASCULINO' : 'FEMENINO',
     edad: row.edad || '',
     celular: row.celular || '',
-    maestria: row.maestria || '',
+    maestria: row.maestria_nombre || row.maestria || '',
     departamentoId: row.departamento_id,
     provinciaId: row.provincia_id,
     distritoId: row.distrito_id,
@@ -81,6 +81,27 @@ function databaseRowToRecord(row: any): CapacitacionResponseRecord {
     satisfaccion_general: Number(row.satisfaccion_general) || 5,
     observaciones_sugerencias: row.observaciones_sugerencias || ''
   };
+}
+
+export async function getMaestrias(): Promise<MaestriaItem[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return MAESTRIAS_FALLBACK;
+
+  try {
+    const { data, error } = await supabase
+      .from('maestrias')
+      .select('id, nombre')
+      .eq('activo', true)
+      .order('id', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      return data.map(m => ({ id: Number(m.id), nombre: m.nombre }));
+    }
+  } catch (e) {
+    console.warn('Error al cargar maestrias de Supabase, usando catálogo local:', e);
+  }
+
+  return MAESTRIAS_FALLBACK;
 }
 
 export async function getEventoActivo(): Promise<{ id: number; nombre: string; expositor: string; fecha_evento?: string } | null> {

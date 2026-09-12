@@ -1,4 +1,4 @@
-import type { LikertRating } from './types';
+import type { LikertRating, MaestriaItem } from './types';
 
 export const MAESTRIAS_USS = [
   "MAESTRÍA EN PSICOLOGÍA CLÍNICA Y COMUNITARIA",
@@ -18,6 +18,11 @@ export const MAESTRIAS_USS = [
   "MAESTRÍA EN CIENCIAS DE LA EDUCACIÓN CON MENCIÓN EN GESTIÓN DE LA CALIDAD Y ACREDITACIÓN EDUCATIVA",
   "MAESTRÍA EN CIENCIAS DE LA EDUCACIÓN CON MENCIÓN EN GESTIÓN EDUCATIVA"
 ];
+
+export const MAESTRIAS_FALLBACK: MaestriaItem[] = MAESTRIAS_USS.map((nombre, idx) => ({
+  id: idx + 1,
+  nombre
+}));
 
 export const CAPACITACION_DEFAULT = {
   nombre: 'Inducción Maestría USS 202602',
