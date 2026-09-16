@@ -16,6 +16,7 @@ export interface MaestriaItem {
 }
 
 export interface FormParticipantAttributes {
+  personaId?: number;
   capacitacionId?: number;
   maestriaId?: number;
   apellidosNombres: string;

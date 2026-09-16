@@ -20,9 +20,9 @@ export function getSupabaseClient(): SupabaseClient | null {
   }
 }
 
-// Map frontend camelCase to snake_case for Supabase
-function recordToDatabaseRow(record: CapacitacionResponseRecord) {
+function recordToDatabaseRow(record: CapacitacionResponseRecord, personaId?: number | null) {
   return {
+    persona_id: personaId ?? (record.personaId ? Number(record.personaId) : null),
     capacitacion_id: record.capacitacionId ? Number(record.capacitacionId) : null,
     maestria_id: record.maestriaId ? Number(record.maestriaId) : null,
     apellidos_nombres: record.apellidosNombres,
@@ -227,7 +227,102 @@ export async function submitCapacitacionResponse(record: CapacitacionResponseRec
   }
 
   try {
-    const dbRow = recordToDatabaseRow(record);
+    const cleanEmail = record.correo?.trim().toLowerCase();
+    const cleanCelular = (record.celular || '').replace(/\D/g, '').trim();
+    const eventoId = record.capacitacionId ? Number(record.capacitacionId) : null;
+
+    // 0. Validación de duplicidad por evento específico:
+    // Si ya completó la encuesta para este evento, no permitir reenvío.
+    // Salvo que sea otro evento distinto, en cuyo caso sí puede responder normalmente.
+    if (eventoId) {
+      let queryCheck = supabase
+        .from('respuestas_capacitacion')
+        .select('id, created_at')
+        .eq('capacitacion_id', eventoId);
+
+      if (cleanEmail && cleanCelular.length === 9) {
+        queryCheck = queryCheck.or(`correo.ilike.${cleanEmail},celular.eq.${cleanCelular}`);
+      } else if (cleanEmail) {
+        queryCheck = queryCheck.ilike('correo', cleanEmail);
+      } else if (cleanCelular.length === 9) {
+        queryCheck = queryCheck.eq('celular', cleanCelular);
+      }
+
+      const { data: yaExiste } = await queryCheck.limit(1);
+      if (yaExiste && yaExiste.length > 0) {
+        return {
+          success: false,
+          synced: false,
+          error: 'Usted ya completó la evaluación para este evento. No se admiten registros duplicados para la misma capacitación.'
+        };
+      }
+    }
+
+    let personaId: number | null = null;
+
+    // 1. Normalización Relacional: Vincular con tbl_personas con rol estático 'ENCUESTADO'
+    try {
+      if (cleanEmail) {
+        const { data: matchedPersona } = await supabase
+          .from('tbl_personas')
+          .select('id')
+          .eq('correo_institucional', cleanEmail)
+          .maybeSingle();
+
+        if (matchedPersona?.id) {
+          personaId = matchedPersona.id;
+        } else if (record.apellidosNombres) {
+          const parts = record.apellidosNombres.trim().split(' ');
+          const nombres = parts.length > 2 ? `${parts[0]} ${parts[1]}` : parts[0];
+          const apellidos = parts.length > 2 ? parts.slice(2).join(' ') : (parts[1] || '');
+
+          let insertedPersona: any = null;
+          try {
+            const { data: newPersona, error: pErr } = await supabase
+              .from('tbl_personas')
+              .insert([
+                {
+                  nombres,
+                  apellidos,
+                  correo_institucional: cleanEmail,
+                  telefono: record.celular || null,
+                  genero: record.esMasculino === true ? 'MASCULINO' : 'FEMENINO',
+                  rol: 'ENCUESTADO',
+                }
+              ])
+              .select('id')
+              .single();
+
+            if (newPersona?.id) {
+              insertedPersona = newPersona;
+            } else if (pErr && pErr.message?.includes('rol')) {
+              const { data: fallbackPersona } = await supabase
+                .from('tbl_personas')
+                .insert([
+                  {
+                    nombres,
+                    apellidos,
+                    correo_institucional: cleanEmail,
+                    telefono: record.celular || null,
+                    genero: record.esMasculino === true ? 'MASCULINO' : 'FEMENINO',
+                  }
+                ])
+                .select('id')
+                .single();
+              if (fallbackPersona?.id) insertedPersona = fallbackPersona;
+            }
+          } catch { }
+
+          if (insertedPersona?.id) {
+            personaId = insertedPersona.id;
+          }
+        }
+      }
+    } catch (personaErr) {
+      console.warn('Aviso: tbl_personas no disponible para relación en formulario:', personaErr);
+    }
+
+    const dbRow = recordToDatabaseRow(record, personaId);
     const { data, error } = await supabase.from('respuestas_capacitacion').insert([dbRow]).select();
 
     if (error) {
