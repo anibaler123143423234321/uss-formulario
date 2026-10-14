@@ -1,0 +1,40 @@
+---
+import Layout from '../layouts/Layout.astro';
+import EncuestaDocenteReact from '../components/EncuestaDocenteReact';
+
+const idParam = Astro.url.searchParams.get('id') || Astro.url.searchParams.get('encuesta');
+const eventoId = idParam ? Number(idParam) : undefined;
+---
+
+<Layout title="Encuesta de Satisfacción Docente | Universidad Señor de Sipán">
+  <!-- Cabecera Institucional Blanca con Logo USS Centrado (Idéntico a encuesta-junio.vercel.app) -->
+  <header class="w-full bg-white border-b border-slate-200/80 py-3 shadow-2xs">
+    <div class="max-w-2xl mx-auto px-4 flex items-center justify-center">
+      <img
+        src="/Logo_CInf_USS_Negro.png"
+        alt="USS Centro de Informática"
+        class="h-10 sm:h-12 w-auto object-contain"
+      />
+    </div>
+  </header>
+
+  <!-- Cuerpo con fondo morado tenue característico de Google Forms USS -->
+  <main class="flex-1 w-full bg-[#ede7f6] py-6 sm:py-8 px-3.5 sm:px-4 min-h-[calc(100vh-75px)] flex flex-col justify-between">
+    <div class="w-full flex-1 flex flex-col justify-center">
+      <EncuestaDocenteReact client:load eventoId={eventoId} />
+    </div>
+
+    <!-- Pie de página tipo Google Forms -->
+    <footer class="max-w-[640px] mx-auto w-full text-center py-6 space-y-1.5 select-none">
+      <p class="text-[11px] text-slate-500 leading-tight">
+        Nunca envíes contraseñas a través de Formularios de Google.
+      </p>
+      <p class="text-[11px] text-slate-500 leading-tight">
+        Este formulario se creó en el Centro de Informática de la Universidad Señor de Sipán.
+      </p>
+      <p class="text-[12px] font-bold text-slate-600 pt-2 tracking-wide">
+        Google Formularios
+      </p>
+    </footer>
+  </main>
+</Layout>

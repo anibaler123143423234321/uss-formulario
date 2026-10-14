@@ -1,5 +1,7 @@
 export type LikertRating = 'MUY BUENO' | 'BUENO' | 'REGULAR' | 'DEFICIENTE' | 'MUY DEFICIENTE';
 
+export type TipoEvento = 'CAPACITACION' | 'ENCUESTA_DOCENTE';
+
 export interface CapacitacionEvento {
   id: number;
   nombre: string;
@@ -7,6 +9,42 @@ export interface CapacitacionEvento {
   descripcion?: string;
   fecha_evento?: string;
   activo: boolean;
+  tipo_evento?: TipoEvento;
+  periodo?: string;
+}
+
+export interface EncuestaDocenteAsignacion {
+  id: number;
+  evento_id: number;
+  estudiante: string;
+  correo: string;
+  usuario: string;
+  plan_estudio: string;
+  curso: string;
+  pead: string;
+  docente: string;
+  completado: boolean;
+  created_at?: string;
+}
+
+export interface EncuestaDocenteRespuesta {
+  id?: number;
+  evento_id: number;
+  asignacion_id: number;
+  correo: string;
+  estudiante: string;
+  curso: string;
+  docente: string;
+  pead?: string;
+  plan_estudio?: string;
+  pregunta_a: number;
+  pregunta_b: number;
+  pregunta_c: number;
+  pregunta_d: number;
+  pregunta_e: number;
+  pregunta_f: number;
+  comentarios?: string;
+  created_at?: string;
 }
 
 export interface MaestriaItem {

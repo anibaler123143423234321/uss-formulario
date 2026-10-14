@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { CapacitacionResponseRecord, MaestriaItem } from './types';
+import type { CapacitacionResponseRecord, MaestriaItem, EncuestaDocenteAsignacion, EncuestaDocenteRespuesta, CapacitacionEvento } from './types';
 import { MAESTRIAS_FALLBACK } from './constants';
 
 // Obtener cliente oficial de Supabase estrictamente desde variables de entorno
@@ -104,15 +104,32 @@ export async function getMaestrias(): Promise<MaestriaItem[]> {
   return MAESTRIAS_FALLBACK;
 }
 
-export async function getEventoActivo(): Promise<{ id: number; nombre: string; expositor: string; fecha_evento?: string } | null> {
+export async function getEventoActivo(
+  tipo: 'CAPACITACION' | 'ENCUESTA_DOCENTE' = 'CAPACITACION'
+): Promise<{
+  id: number;
+  nombre: string;
+  expositor: string;
+  fecha_evento?: string;
+  tipo_evento?: 'CAPACITACION' | 'ENCUESTA_DOCENTE';
+  periodo?: string;
+} | null> {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('capacitaciones_eventos')
       .select('*')
-      .eq('activo', true)
+      .eq('activo', true);
+
+    if (tipo === 'ENCUESTA_DOCENTE') {
+      query = query.eq('tipo_evento', 'ENCUESTA_DOCENTE');
+    } else {
+      query = query.or('tipo_evento.eq.CAPACITACION,tipo_evento.is.null');
+    }
+
+    const { data, error } = await query
       .order('id', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -122,11 +139,50 @@ export async function getEventoActivo(): Promise<{ id: number; nombre: string; e
         id: Number(data.id),
         nombre: data.nombre,
         expositor: data.expositor,
-        fecha_evento: data.fecha_evento
+        fecha_evento: data.fecha_evento,
+        tipo_evento: data.tipo_evento || 'CAPACITACION',
+        periodo: data.periodo || '2026-JUNIO'
       };
     }
   } catch (e) {
     console.warn('No se pudo obtener evento desde capacitaciones_eventos, usando default:', e);
+  }
+
+  return null;
+}
+
+export async function getEventoPorId(
+  id: number
+): Promise<{
+  id: number;
+  nombre: string;
+  expositor: string;
+  fecha_evento?: string;
+  tipo_evento?: 'CAPACITACION' | 'ENCUESTA_DOCENTE';
+  periodo?: string;
+} | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('capacitaciones_eventos')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!error && data) {
+      return {
+        id: Number(data.id),
+        nombre: data.nombre,
+        expositor: data.expositor,
+        fecha_evento: data.fecha_evento,
+        tipo_evento: data.tipo_evento || 'CAPACITACION',
+        periodo: data.periodo || '2026-JUNIO'
+      };
+    }
+  } catch (e) {
+    console.warn('Error al obtener evento por id:', e);
   }
 
   return null;
@@ -367,3 +423,134 @@ export async function fetchAllResponses(): Promise<{ records: CapacitacionRespon
 
   return { records: [], fromSupabase: false };
 }
+
+export async function consultarAsignacionDocente(
+  credencial: string,
+  eventoId?: number
+): Promise<{
+  success: boolean;
+  asignacion?: EncuestaDocenteAsignacion;
+  evento?: CapacitacionEvento;
+  error?: string;
+}> {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return { success: false, error: 'No se pudo conectar a la base de datos.' };
+  }
+
+  const cleanCred = credencial.trim().toUpperCase().replace('@USS.EDU.PE', '');
+  const cleanEmail = `${cleanCred.toLowerCase()}@uss.edu.pe`;
+
+  try {
+    let targetEventoId = eventoId;
+    let targetEvento: any = null;
+
+    if (!targetEventoId) {
+      const { data: evData } = await supabase
+        .from('capacitaciones_eventos')
+        .select('*')
+        .eq('activo', true)
+        .eq('tipo_evento', 'ENCUESTA_DOCENTE')
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (evData) {
+        targetEventoId = evData.id;
+        targetEvento = evData;
+      }
+    } else {
+      const { data: evData } = await supabase
+        .from('capacitaciones_eventos')
+        .select('*')
+        .eq('id', targetEventoId)
+        .maybeSingle();
+      targetEvento = evData;
+    }
+
+    if (!targetEventoId) {
+      return { success: false, error: 'No hay ningún evento activo de encuesta docente.' };
+    }
+
+    const { data: asig, error } = await supabase
+      .from('tbl_encuesta_docente_asignaciones')
+      .select('*')
+      .eq('evento_id', targetEventoId)
+      .or(`usuario.ilike.${cleanCred},correo.ilike.${cleanEmail},usuario.ilike.${credencial.trim()}`)
+      .order('id', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !asig) {
+      return {
+        success: false,
+        error: `No se encontró asignación docente para "${credencial}". Verifique su usuario institucional o contacte a soporte.`
+      };
+    }
+
+    if (asig.completado) {
+      return {
+        success: false,
+        error: 'Usted ya completó su encuesta docente para este periodo. Gracias por su participación.'
+      };
+    }
+
+    return {
+      success: true,
+      asignacion: asig as EncuestaDocenteAsignacion,
+      evento: targetEvento as CapacitacionEvento
+    };
+  } catch (err: any) {
+    console.error('Error al consultar asignación docente:', err);
+    return { success: false, error: err.message || String(err) };
+  }
+}
+
+export async function submitRespuestaDocente(
+  respuesta: EncuestaDocenteRespuesta
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return { success: false, error: 'No se pudo conectar a la base de datos.' };
+  }
+
+  try {
+    const { error: insertError } = await supabase
+      .from('tbl_encuesta_docente_respuestas')
+      .insert({
+        evento_id: respuesta.evento_id,
+        asignacion_id: respuesta.asignacion_id,
+        correo: respuesta.correo,
+        estudiante: respuesta.estudiante,
+        curso: respuesta.curso,
+        docente: respuesta.docente,
+        pead: respuesta.pead,
+        plan_estudio: respuesta.plan_estudio,
+        pregunta_a: respuesta.pregunta_a,
+        pregunta_b: respuesta.pregunta_b,
+        pregunta_c: respuesta.pregunta_c,
+        pregunta_d: respuesta.pregunta_d,
+        pregunta_e: respuesta.pregunta_e,
+        pregunta_f: respuesta.pregunta_f,
+        comentarios: respuesta.comentarios || null
+      });
+
+    if (insertError) {
+      if (insertError.code === '23505') {
+        return { success: false, error: 'Usted ya envió su respuesta para esta asignatura.' };
+      }
+      return { success: false, error: insertError.message };
+    }
+
+    await supabase
+      .from('tbl_encuesta_docente_asignaciones')
+      .update({ completado: true })
+      .eq('id', respuesta.asignacion_id);
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error enviando respuesta docente:', err);
+    return { success: false, error: err.message || String(err) };
+  }
+}
+
