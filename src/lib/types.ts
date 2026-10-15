@@ -16,6 +16,7 @@ export interface CapacitacionEvento {
 export interface EncuestaDocenteAsignacion {
   id: number;
   evento_id: number;
+  campus?: string;
   estudiante: string;
   correo: string;
   usuario: string;

@@ -314,7 +314,7 @@ export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps)
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-slate-800 font-medium">
                 <Calendar className="w-4 h-4 text-slate-600 shrink-0" />
                 <span>
-                  <strong>Plan de Estudio:</strong> {asignacion.plan_estudio}
+                  <strong>Plan de Estudio:</strong> {asignacion.plan_estudio} {asignacion.campus ? `· ${asignacion.campus}` : ''}
                 </span>
               </div>
 
