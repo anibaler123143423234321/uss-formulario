@@ -438,8 +438,9 @@ export async function consultarAsignacionDocente(
     return { success: false, error: 'No se pudo conectar a la base de datos.' };
   }
 
-  const cleanCred = credencial.trim().toUpperCase().replace('@USS.EDU.PE', '');
-  const cleanEmail = `${cleanCred.toLowerCase()}@uss.edu.pe`;
+  const rawInput = credencial.trim();
+  const inputLower = rawInput.toLowerCase();
+  const prefix = inputLower.replace(/@.*$/, '');
 
   try {
     let targetEventoId = eventoId;
@@ -472,19 +473,27 @@ export async function consultarAsignacionDocente(
       return { success: false, error: 'No hay ningún evento activo de encuesta docente.' };
     }
 
+    // Búsqueda flexible: usuario exacto, usuario por prefijo, correo exacto o prefijo antes del @
+    const filter = [
+      `usuario.ilike.${rawInput}`,
+      `usuario.ilike.${prefix}`,
+      `correo.ilike.${rawInput}`,
+      `correo.ilike.${prefix}@%`,
+    ].join(',');
+
     const { data: asig, error } = await supabase
       .from('tbl_encuesta_docente_asignaciones')
       .select('*')
       .eq('evento_id', targetEventoId)
-      .or(`usuario.ilike.${cleanCred},correo.ilike.${cleanEmail},usuario.ilike.${credencial.trim()}`)
-      .order('id', { ascending: true })
+      .or(filter)
+      .order('completado', { ascending: true })
       .limit(1)
       .maybeSingle();
 
     if (error || !asig) {
       return {
         success: false,
-        error: `No se encontró asignación docente para "${credencial}". Verifique su usuario institucional o contacte a soporte.`
+        error: `No se encontró asignación docente para "${credencial}". Verifique su usuario, código o correo institucional.`
       };
     }
 
