@@ -226,38 +226,25 @@ export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps)
         <form onSubmit={handleConsultar} className="space-y-4">
           <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-3">
             <label className="block text-xs font-bold text-slate-800">
-              Correo institucional o Usuario / Credencial <span className="text-rose-600 font-bold">*</span>
+              Correo institucional <span className="text-rose-600 font-bold">*</span>
             </label>
 
-            <div className="flex items-center rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:border-[#4c1d95] focus-within:ring-2 focus-within:ring-purple-100 transition-all">
+            <div className="flex rounded-xl border border-slate-300 bg-white overflow-hidden focus-within:border-[#4c1d95] focus-within:ring-2 focus-within:ring-purple-100 transition-all">
               <input
                 type="text"
                 required
                 value={usuarioInput}
-                onChange={(e) => setUsuarioInput(e.target.value.trim())}
-                placeholder="ej. rosallatasrios0220, W20260731143618CI8 o tu correo completo"
-                className="w-full px-3.5 py-2.5 text-xs font-mono font-medium text-slate-900 outline-none"
+                onChange={(e) => setUsuarioInput(e.target.value.replace(/\s+/g, ''))}
+                placeholder="tuusuario"
+                className="flex-1 px-3.5 py-2.5 text-xs font-mono font-medium text-slate-900 outline-none"
               />
+              <span className="px-3.5 py-2.5 bg-slate-50 text-slate-500 text-xs font-mono font-bold border-l border-slate-200 select-none flex items-center">
+                @uss.edu.pe
+              </span>
             </div>
 
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              Puedes ingresar tu usuario institucional, tu credencial de matrícula o tu correo electrónico (ejemplos:{' '}
-              <button
-                type="button"
-                onClick={() => setUsuarioInput('BABANTOLIZBETH')}
-                className="text-[#4c1d95] font-bold hover:underline font-mono"
-              >
-                BABANTOLIZBETH
-              </button>
-              ,{' '}
-              <button
-                type="button"
-                onClick={() => setUsuarioInput('rosallatasrios0220')}
-                className="text-[#4c1d95] font-bold hover:underline font-mono"
-              >
-                rosallatasrios0220
-              </button>
-              ).
+              Ingresa tu nombre de usuario institucional sin el @uss.edu.pe.
             </p>
           </div>
 
