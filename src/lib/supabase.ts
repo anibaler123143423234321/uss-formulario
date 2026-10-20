@@ -429,8 +429,10 @@ export async function consultarAsignacionDocente(
   eventoId?: number
 ): Promise<{
   success: boolean;
+  asignaciones?: EncuestaDocenteAsignacion[];
   asignacion?: EncuestaDocenteAsignacion;
   evento?: CapacitacionEvento;
+  todosCompletados?: boolean;
   error?: string;
 }> {
   const supabase = getSupabaseClient();
@@ -481,32 +483,36 @@ export async function consultarAsignacionDocente(
       `correo.ilike.${prefix}@%`,
     ].join(',');
 
-    const { data: asig, error } = await supabase
+    const { data: asignaciones, error } = await supabase
       .from('tbl_encuesta_docente_asignaciones')
       .select('*')
       .eq('evento_id', targetEventoId)
       .or(filter)
       .order('completado', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .order('id', { ascending: true });
 
-    if (error || !asig) {
+    if (error || !asignaciones || asignaciones.length === 0) {
       return {
         success: false,
         error: `No se encontró asignación docente para "${credencial}". Verifique su usuario, código o correo institucional.`
       };
     }
 
-    if (asig.completado) {
+    const pendientes = asignaciones.filter((a: any) => !a.completado);
+
+    if (pendientes.length === 0) {
+      const nombreEst = asignaciones[0]?.estudiante || 'estudiante';
       return {
         success: false,
-        error: 'Usted ya completó su encuesta docente para este periodo. Gracias por su participación.'
+        todosCompletados: true,
+        error: `Estimado(a) ${nombreEst}, ya completó la evaluación docente de todos sus cursos (${asignaciones.length}) para este periodo. Gracias por su participación.`
       };
     }
 
     return {
       success: true,
-      asignacion: asig as EncuestaDocenteAsignacion,
+      asignaciones: asignaciones as EncuestaDocenteAsignacion[],
+      asignacion: pendientes[0] as EncuestaDocenteAsignacion,
       evento: targetEvento as CapacitacionEvento
     };
   } catch (err: any) {

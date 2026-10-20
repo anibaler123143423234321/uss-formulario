@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  ArrowLeft,
+  Check,
   Send,
   Star,
   RotateCcw,
@@ -64,7 +66,7 @@ const PREGUNTAS = [
 ];
 
 export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps) {
-  const [step, setStep] = useState<'identificacion' | 'preguntas' | 'exito'>('identificacion');
+  const [step, setStep] = useState<'identificacion' | 'seleccion_curso' | 'preguntas' | 'exito'>('identificacion');
   const [usuarioInput, setUsuarioInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -81,6 +83,7 @@ export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps)
   });
 
   // Datos recuperados de la nómina y evento
+  const [asignaciones, setAsignaciones] = useState<EncuestaDocenteAsignacion[]>([]);
   const [asignacion, setAsignacion] = useState<EncuestaDocenteAsignacion | null>(null);
   const [evento, setEvento] = useState<CapacitacionEvento | null>(null);
 
@@ -112,7 +115,7 @@ export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps)
     loadEventoInfo();
   }, [targetId]);
 
-  // Paso 1: Consultar asignación por credencial
+  // Paso 1: Consultar asignaciones por credencial
   const handleConsultar = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -127,13 +130,41 @@ export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps)
     const result = await consultarAsignacionDocente(clean, targetId);
     setIsLoading(false);
 
-    if (result.success && result.asignacion && result.evento) {
-      setAsignacion(result.asignacion);
+    if (result.success && result.evento && result.asignaciones && result.asignaciones.length > 0) {
+      setAsignaciones(result.asignaciones);
       setEvento(result.evento);
-      setStep('preguntas');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (result.asignaciones.length > 1) {
+        setStep('seleccion_curso');
+      } else {
+        setAsignacion(result.asignacion || result.asignaciones[0]);
+        setStep('preguntas');
+      }
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } else {
       setErrorMsg(result.error || 'No se encontró asignación para este usuario.');
+    }
+  };
+
+  // Seleccionar un curso para evaluar
+  const handleSeleccionarCurso = (item: EncuestaDocenteAsignacion) => {
+    if (item.completado) return;
+    setAsignacion(item);
+    setRespuestas({
+      pregunta_a: 0,
+      pregunta_b: 0,
+      pregunta_c: 0,
+      pregunta_d: 0,
+      pregunta_e: 0,
+      pregunta_f: 5,
+    });
+    setComentarios('');
+    setErrorMsg(null);
+    setStep('preguntas');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -180,8 +211,13 @@ export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps)
     setIsLoading(false);
 
     if (result.success) {
+      setAsignaciones((prev) =>
+        prev.map((a) => (a.id === asignacion.id ? { ...a, completado: true } : a))
+      );
       setStep('exito');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       try {
         confetti({
           particleCount: 100,
@@ -270,9 +306,140 @@ export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps)
         </form>
       )}
 
+      {/* PASO: Selección de Curso (cuando el alumno tiene 2 o más cursos) */}
+      {step === 'seleccion_curso' && (
+        <div className="space-y-3.5 animate-in fade-in">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-purple-900 bg-purple-50 px-3 py-2 rounded-xl border border-purple-100">
+              <User className="w-4 h-4 text-purple-700 shrink-0" />
+              <span>
+                Estudiante: <strong>{asignaciones[0]?.estudiante}</strong>
+              </span>
+            </div>
+            <h2 className="text-sm font-bold text-slate-800 pt-1">
+              Selecciona el curso que deseas evaluar
+            </h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Tienes <strong>{asignaciones.length} cursos</strong> asignados en este periodo. Debes evaluar a cada docente de forma individual.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {asignaciones.map((item, idx) => {
+              const isCompletado = item.completado;
+              return (
+                <div
+                  key={item.id}
+                  className={`rounded-2xl p-4 sm:p-5 border transition-all ${
+                    isCompletado
+                      ? 'bg-emerald-50/40 border-emerald-200/80'
+                      : 'bg-white border-slate-200/90 hover:border-purple-300 hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                          Curso {idx + 1} de {asignaciones.length}
+                        </span>
+                        {isCompletado ? (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                            <Check className="w-3 h-3 text-emerald-700" />
+                            Evaluado
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-100 text-amber-800">
+                            Pendiente
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                        <BookOpen className="w-4 h-4 text-[#4c1d95] shrink-0" />
+                        {item.curso}
+                      </h3>
+
+                      <div className="text-xs text-slate-600 space-y-0.5 pl-5">
+                        <p>
+                          Docente: <strong className="text-slate-800">{item.docente}</strong>
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Grupo / PEAD: <span className="font-semibold">{item.pead}</span> • Plan: <span className="font-semibold">{item.plan_estudio}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 pt-2 sm:pt-0">
+                      {isCompletado ? (
+                        <div className="text-xs font-bold text-emerald-700 flex items-center gap-1.5 px-4 py-2 bg-emerald-100/60 rounded-xl">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Completado
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSeleccionarCurso(item)}
+                          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#4c1d95] hover:bg-[#3b1277] text-white text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <span>Evaluar docente</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-between items-center pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setStep('identificacion');
+                setUsuarioInput('');
+                setAsignaciones([]);
+                setAsignacion(null);
+              }}
+              className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 cursor-pointer flex items-center gap-1.5"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Cambiar de usuario
+            </button>
+
+            {asignaciones.every((a) => a.completado) && (
+              <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4" />
+                Todos los cursos evaluados
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* PASO 2: Ficha del Estudiante y Cuestionario */}
       {step === 'preguntas' && asignacion && (
         <form onSubmit={handleEnviar} className="space-y-4">
+          {/* Navegación multi-curso si tiene más de 1 */}
+          {asignaciones.length > 1 && (
+            <div className="flex items-center justify-between bg-purple-50/80 border border-purple-200/80 px-4 py-2.5 rounded-xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg(null);
+                  setStep('seleccion_curso');
+                }}
+                className="text-xs font-bold text-purple-900 hover:text-purple-950 flex items-center gap-1 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Ver todos mis cursos
+              </button>
+              <span className="text-[11px] font-bold text-purple-900 bg-white px-2.5 py-1 rounded-lg border border-purple-200 shadow-2xs">
+                Curso {asignaciones.findIndex((a) => a.id === asignacion.id) + 1} de {asignaciones.length}
+              </span>
+            </div>
+          )}
+
           {/* Barra de progreso */}
           <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-1.5">
             <div className="flex items-center justify-between text-xs text-slate-600">
@@ -428,11 +595,18 @@ export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps)
           <div className="flex items-center justify-between pt-2">
             <button
               type="button"
-              onClick={() => setStep('identificacion')}
+              onClick={() => {
+                setErrorMsg(null);
+                if (asignaciones.length > 1) {
+                  setStep('seleccion_curso');
+                } else {
+                  setStep('identificacion');
+                }
+              }}
               className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-white transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Cambiar usuario</span>
+              <span>{asignaciones.length > 1 ? '← Volver a cursos' : 'Cambiar usuario'}</span>
             </button>
 
             <button
@@ -458,7 +632,7 @@ export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps)
 
       {/* PASO 3: Pantalla de Agradecimiento y Éxito */}
       {step === 'exito' && (
-        <div className="bg-white rounded-2xl p-8 border border-slate-200/80 shadow-xs text-center space-y-4 animate-in fade-in">
+        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-xs text-center space-y-5 animate-in fade-in">
           <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
             <CheckCircle2 className="w-10 h-10" />
           </div>
@@ -468,17 +642,81 @@ export default function EncuestaDocenteReact({ eventoId }: EncuestaDocenteProps)
               ¡Gracias por tu participación!
             </h3>
             <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
-              Tus respuestas han sido registradas exitosamente. Tu opinión nos ayuda a
-              mantener la calidad y excelencia académica en la Universidad Señor de Sipán.
+              Tu evaluación para el docente{' '}
+              <strong className="text-slate-800">{asignacion?.docente}</strong> en el curso{' '}
+              <strong className="text-slate-800">{asignacion?.curso}</strong> ha sido registrada con éxito.
             </p>
           </div>
 
-          <div className="pt-3">
+          {/* Si quedan cursos pendientes */}
+          {(() => {
+            const pendientesRestantes = asignaciones.filter(
+              (a) => a.id !== asignacion?.id && !a.completado
+            );
+
+            if (pendientesRestantes.length > 0) {
+              const siguiente = pendientesRestantes[0];
+              return (
+                <div className="p-4 sm:p-5 rounded-2xl bg-purple-50/80 border border-purple-200 text-left space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-purple-950 uppercase tracking-wider">
+                      Curso pendiente por evaluar ({pendientesRestantes.length} restante{pendientesRestantes.length > 1 ? 's' : ''})
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                      Pendiente
+                    </span>
+                  </div>
+
+                  <div className="bg-white p-3.5 rounded-xl border border-purple-100 space-y-1">
+                    <p className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4 text-purple-700 shrink-0" />
+                      {siguiente.curso}
+                    </p>
+                    <p className="text-xs text-slate-600 pl-5">
+                      Docente: <strong className="text-slate-800">{siguiente.docente}</strong>
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSeleccionarCurso(siguiente)}
+                      className="flex-1 px-5 py-2.5 rounded-xl bg-[#4c1d95] hover:bg-[#3b1277] text-white text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>Evaluar siguiente curso</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                    {pendientesRestantes.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorMsg(null);
+                          setStep('seleccion_curso');
+                        }}
+                        className="px-4 py-2.5 rounded-xl border border-purple-200 bg-white hover:bg-purple-100/50 text-purple-900 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        Ver todos mis cursos
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="p-4 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-900 text-xs font-medium">
+                🎉 ¡Completaste satisfactoriamente la evaluación de todos tus cursos asignados ({asignaciones.length || 1})!
+              </div>
+            );
+          })()}
+
+          <div className="pt-2">
             <button
               type="button"
               onClick={() => {
                 setStep('identificacion');
                 setUsuarioInput('');
+                setAsignaciones([]);
                 setAsignacion(null);
                 setRespuestas({
                   pregunta_a: 0,
